@@ -1,7 +1,7 @@
 package search;
 #search.pm
 #copyright 2004, 2005, Jason Whitehorn
-my $version = "0.7.9";
+my $version = "0.7.10";
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -162,7 +162,7 @@ sub display{
     print "</head><body OnLoad=document.search.query.focus();>\n";
 
     print "<form name=\"search\" action=\"../cgi-bin/search.pl\" method=\"get\">";
-    print "<a style='color: white;' href=\"http://senas.whitehorndesign.net\"><img src=\"../images/senas.jpg\"></a>";
+    print "<a style='color: white;' href=\"../\"><img src=\"../images/senas.jpg\"></a>";
     print "<input type=\"text\" value=\"$search\" name=\"query\" size=45>";
     print "<input type=\"submit\" value=\"Search\">";
     print "</form>";
@@ -276,8 +276,8 @@ sub display{
     #print "</div>";
     print "<center>";
     print "<div class=\"comment\">Search.pm version $version :: Copyright 2004-2005 ";
-    print "<a href=\"http://www.whitehorndesign.net/\">Jason Whitehorn</a>, "
-	print "<a href=\"http://www.senas.org/source/\">source code</a> distributed under the"
+    print "<a href=\"http://www.whitehorndesign.net/\">Jason Whitehorn</a>, ";
+	print "<a href=\"http://senas.sourceforge.net/\">source code</a> distributed under the";
 	print "<a href=\"http://www.gnu.org/licenses/gpl.html\">GNU GPL</a></div></center>";
 }
 

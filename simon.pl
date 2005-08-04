@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 #simon, web spider
 #Copyright 2004, 2005, Jason Whitehorn
-my $version = 2.0;
+my $version = 2.0.1;
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -20,9 +20,8 @@ use LWP::RobotUA;
 use URI;	#for link absolution
 use DBI;
 $| = 1;
-my $admin_email = "admin@mydomain.com";
 
-my $robot = LWP::RobotUA->new("simon/$version", "$admin_email");
+my $robot = LWP::RobotUA->new('simon/2.0', 'admin@mydomain.com');
 $robot->max_size( (60*1024) );	#download upto 60Kbytes
 $robot->max_redirect(0);	#no redirects!
 my $running = 1;	#turn on by default

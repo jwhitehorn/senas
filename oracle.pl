@@ -228,7 +228,7 @@ do{
                     $query = "insert into Sources (URL, MD5, LastSeen, Type) values (";
                     $query .= $db->quote($url) . ", " . $db->quote($MD5) . ", $LastSeen, ";
                     $query .= $db->quote($type) . ");";
-                    $db->do($query);
+					$db->do($query);
                 }else{
                     $query = "select MD5 from Sources where MD5=";
                     $query .= $db->quote($MD5) . ";";

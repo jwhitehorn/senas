@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #The oracle copyright 2004, 2005, Jason Whitehorn
-my $version = "0.7.9";  
+my $version = "0.7.10";  
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -14,23 +14,43 @@ my $version = "0.7.9";
 #You should have received a copy of the GNU General Public License
 #along with this program; if not, write to the Free Software
 #Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+my $config_file = "senas.cfg";
 
 
+my $DBPassword;# = "password";
+my $DBHost;# = "127.0.0.1";
+my $DB;# = "search";
+my $DBUser;# = "username";
 
-my $DBPassword = "password";
-my $DBHost = "127.0.0.1";
-my $DB = "search";
-my $DBUser = "username";
+open FILE, "<$config_file";
+while(<FILE>){
+	if( $_ =~ m/password=([^;]*);/){
+		$DBPassword = $1;
+	}
+	if( $_ =~ m/username=([^;]*);/){
+		$DBUser = $1;
+	}
+	if( $_ =~ m/host=([^;]*);/){
+		$DBHost = $1;
+	}
+	if( $_ =~ m/database=([^;]*);/){
+		$DB = $1;
+	}
+}
+close FILE;
 
 use DBI;    #only works with transactional MySQL
 use Digest::MD5 qw(md5_hex);
 use URI;	#for link absolution
 use threads;
 use threads::shared;
-$debug = 1;
+my $debug = 1;		#output debug messages to console
+my $run_ranker = 1;	#run page ranker thread
+
 
 my $action_fail = 1;
 my $action_update = 0;
+
 
 
 my $revisit_in = (30 * 24 * 60 * 60);   #30 days....DUN DUN DUNNN!!!!
@@ -118,7 +138,9 @@ sub Ranker{
 }
 
 $Ithread = threads->new(\&inputReader) or die "Error creating I thread.\n";
-#$Rthread = threads->new(\&Ranker) or die "Error creating Ranker thread.\n";
+if( $run_ranker) {
+	$Rthread = threads->new(\&Ranker) or die "Error creating Ranker thread.\n";
+}
 
 do{
     $db = DBI->connect("DBI:mysql:$DB:$DBHost", "$DBUser", "$DBPassword") or die "Error connection!\n";
@@ -141,7 +163,7 @@ do{
                 print "[DEBUG::oracle] update request for $MD5\n" unless !$debug;
                 #We have a valid URL coming in....
                 $query = "select MD5 from `Index` where MD5=";
-                $query .= $db->quote($MD5);
+                $query .= $db->quote($MD5) . ";";
                 $sth = $db->prepare($query);
                 $sth->execute();
                 if($sth->rows == 0){ #if this is the first time we have seen this exact data
@@ -151,12 +173,16 @@ do{
 					$s->execute();
 					if($s->rows > 0){	#we have seen this URL before, and it has changed.
 					#	remove_source($url);
+						print $query, "\n";
+						print "select MD5 from `Sources` where URL=$lnk;\n";
+					
 						$dup = $s->fetchrow_array();
 						$chk = $db->quote($dup[0]);
 						$db->do("delete from `Sources` where URL=$lnk;");	#remove this old entry
 						$s = $db->prepare("select MD5 from `Sources` where MD5=$chk;");
 						$s->execute();
 						if($s->rows == 0){	#if this was the only source we just deleted...then
+							print "Index removed\n";
 							$db->do("delete from `Index` where MD5=$chk;");
 							$db->do("delete from Links where Source=$chk;");
 							$db->do("delete from WordIndex where MD5=$chk;");

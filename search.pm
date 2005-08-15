@@ -15,12 +15,29 @@ my $version = "0.7.10";
 #You should have received a copy of the GNU General Public License
 #along with this program; if not, write to the Free Software
 #Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-
+my $config_file = "senas.cfg";
   
-my $DBPassword = "password";
-my $DBHost = "127.0.0.1";
-my $DB = "search";
-my $DBUser = "username";
+my $DBPassword;# = "password";
+my $DBHost;# = "127.0.0.1";
+my $DB;# = "search";
+my $DBUser;# = "username";
+open FILE, "<$config_file";
+while(<FILE>){
+	if( $_ =~ m/password=([^;]*);/){
+		$DBPassword = $1;
+	}
+	if( $_ =~ m/username=([^;]*);/){
+		$DBUser = $1;
+	}
+	if( $_ =~ m/host=([^;]*);/){
+		$DBHost = $1;
+	}
+	if( $_ =~ m/database=([^;]*);/){
+		$DB = $1;
+	}
+}
+close FILE;
+
 
 use DBI;
 use Time::HiRes qw( gettimeofday tv_interval );

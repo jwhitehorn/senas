@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 #simon, web spider
 #Copyright 2004, 2005, Jason Whitehorn
-my $version = 2.0.1;
+my $version = 2.0.2;
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -15,6 +15,7 @@ my $version = 2.0.1;
 #You should have received a copy of the GNU General Public License
 #along with this program; if not, write to the Free Software
 #Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+my $config_file = "senas.cfg";
 
 use LWP::RobotUA; 
 use URI;	#for link absolution
@@ -27,11 +28,31 @@ $robot->max_redirect(0);	#no redirects!
 my $running = 1;	#turn on by default
 
 
-my $last_save = time();
-my $mysql_user = "username";
-my $mysql_server = "127.0.0.1";
-my $mysql_pass = "password";
-my $db = DBI->connect("DBI:mysql:search:$mysql_server", $mysql_user, $mysql_pass)
+my $last_save;# = time();
+my $mysql_user;# = "username";
+my $mysql_server;# = "127.0.0.1";
+my $mysql_pass;# = "password";
+my $mysql_db;
+open FILE, "<$config_file";
+while(<FILE>){
+	if( $_ =~ m/password=([^;]*);/){
+		$mysql_pass = $1;
+	}
+	if( $_ =~ m/username=([^;]*);/){
+		$mysql_user = $1;
+	}
+	if( $_ =~ m/host=([^;]*);/){
+		$mysql_server = $1;
+	}
+	if( $_ =~ m/database=([^;]*);/){
+		$mysql_db = $1;
+	}
+}
+close FILE;
+
+
+
+my $db = DBI->connect("DBI:mysql:$mysql_db:$mysql_server", $mysql_user, $mysql_pass)
     or die "Error connecting to database\n";
     
 my $action_fail = 1;

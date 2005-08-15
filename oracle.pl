@@ -182,7 +182,7 @@ do{
 						$s = $db->prepare("select MD5 from `Sources` where MD5=$chk;");
 						$s->execute();
 						if($s->rows == 0){	#if this was the only source we just deleted...then
-							print "Index removed\n";
+							#print "Index removed\n";
 							$db->do("delete from `Index` where MD5=$chk;");
 							$db->do("delete from Links where Source=$chk;");
 							$db->do("delete from WordIndex where MD5=$chk;");

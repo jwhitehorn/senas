@@ -16,6 +16,9 @@ my $version = "0.7.10";
 #along with this program; if not, write to the Free Software
 #Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 my $config_file = "senas.cfg";
+
+my $log_file = "/var/log/senas.log";
+my $log_queries = 0;	#not by default anyways
   
 my $DBPassword;# = "password";
 my $DBHost;# = "127.0.0.1";
@@ -68,8 +71,12 @@ sub search{
     my $search = $_[0];
     my $start = [gettimeofday];
     my $db = DBI->connect("DBI:mysql:$DB:$DBHost", "$DBUser", "$DBPassword") or return -1;
-
-    
+	if($log_queries){
+		my $buffer = $search;
+		$buffer =~ s/:/\\:/g;
+		open LOGFILE, ">>$log_file";
+		print LOGFILE time(), ":", $buffer ":";
+	}
     $query = "select Results from `QueryCache` where `Query` = " . $db->quote($search) . ";";
     my $sth = $db->prepare($query);
     $sth->execute();
@@ -158,6 +165,10 @@ sub search{
         $query .= ");";
         $db->do($query);
     }
+	if($log_queries){
+		print LOGFILE scalar(@results), ":", tv_interval($start), "\n";
+		close LOGFILE;
+	}
     return @results;
 }
 sub display{

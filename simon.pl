@@ -60,8 +60,9 @@ my $action_update = 0;
 
 while($running){
 	#run-time loop
+	my $key = int(rand()*3456789);
     $db->do("begin;");
-    $query = "select URL from outgoing order by Priority desc limit 1;";
+    $query = "select URL from outgoing where Rand<$key order by Priority desc limit 1;";
     $sth = $db->prepare($query);
     $sth->execute();
     if($sth->rows == 1){
@@ -97,7 +98,7 @@ while($running){
     }else{
         #$db->do("commit;");
         #nothing to do
-        sleep 30;
+        sleep 10;
     }
 }
 

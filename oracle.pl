@@ -173,8 +173,8 @@ do{
 					$s->execute();
 					if($s->rows > 0){	#we have seen this URL before, and it has changed.
 					#	remove_source($url);
-						print $query, "\n";
-						print "select MD5 from `Sources` where URL=$lnk;\n";
+						#print $query, "\n";
+						#print "select MD5 from `Sources` where URL=$lnk;\n";
 					
 						$dup = $s->fetchrow_array();
 						$chk = $db->quote($dup[0]);
@@ -303,6 +303,8 @@ do{
 			if($s->rows == 0){
                 #print $MD5, "\n";
 				$db->do("delete from `Index` where MD5=$MD5;");
+				$db->do("delete from WordIndex where MD5=$MD5;");
+				$db->do("delete from Links where Source=$MD5;");
 			}
 		}
 		#----------END OF HACK____________

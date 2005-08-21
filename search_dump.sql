@@ -4,11 +4,13 @@
 #
 # Host: 192.168.1.2 (MySQL 4.0.18-log)
 # Database: search
-# Generation Time: 2005-08-03 11:50:15 -0500
+# Generation Time: 2005-08-21 15:26:16 -0500
 # ************************************************************
 
 # Dump of table Index
 # ------------------------------------------------------------
+
+DROP TABLE IF EXISTS `Index`;
 
 CREATE TABLE `Index` (
   `MD5` varchar(64) NOT NULL default '',
@@ -23,6 +25,8 @@ CREATE TABLE `Index` (
 # Dump of table Links
 # ------------------------------------------------------------
 
+DROP TABLE IF EXISTS `Links`;
+
 CREATE TABLE `Links` (
   `Source` varchar(64) default NULL,
   `Target` mediumblob
@@ -32,6 +36,8 @@ CREATE TABLE `Links` (
 
 # Dump of table QueryCache
 # ------------------------------------------------------------
+
+DROP TABLE IF EXISTS `QueryCache`;
 
 CREATE TABLE `QueryCache` (
   `Query` varchar(255) NOT NULL default '',
@@ -44,6 +50,8 @@ CREATE TABLE `QueryCache` (
 
 # Dump of table Sources
 # ------------------------------------------------------------
+
+DROP TABLE IF EXISTS `Sources`;
 
 CREATE TABLE `Sources` (
   `URL` mediumblob,
@@ -58,6 +66,8 @@ CREATE TABLE `Sources` (
 # Dump of table WordIndex
 # ------------------------------------------------------------
 
+DROP TABLE IF EXISTS `WordIndex`;
+
 CREATE TABLE `WordIndex` (
   `Word` varchar(255) NOT NULL default '',
   `MD5` varchar(64) NOT NULL default '',
@@ -70,6 +80,8 @@ CREATE TABLE `WordIndex` (
 
 # Dump of table incoming
 # ------------------------------------------------------------
+
+DROP TABLE IF EXISTS `incoming`;
 
 CREATE TABLE `incoming` (
   `URL` mediumblob,
@@ -86,9 +98,12 @@ CREATE TABLE `incoming` (
 # Dump of table outgoing
 # ------------------------------------------------------------
 
+DROP TABLE IF EXISTS `outgoing`;
+
 CREATE TABLE `outgoing` (
   `URL` mediumblob,
-  `Priority` smallint(6) default '0'
+  `Priority` smallint(6) default '0',
+  `Rand` bigint(32) unsigned default NULL
 ) TYPE=MyISAM;
 
 

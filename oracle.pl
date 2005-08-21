@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #The oracle copyright 2004, 2005, Jason Whitehorn
-my $version = "0.7.10";  
+my $version = "0.8.0";  
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -291,7 +291,21 @@ do{
         $db->do("commit;");
         $query = "delete from `QueryCache` where `Expire` < " . time() . ";"; 
         $db->do($query);    #delete outdated query cache entries
-
+		#---------HACK below!!!------
+		$query = "select MD5 from `Index`;";
+		$sth = $db->prepare($query);
+		$sth->execute();
+		while($row = $sth->fetchrow_arrayref()){
+			my $MD5 = $db->quote($row->[0]);
+			$query = "select MD5 from `Sources` where MD5=$MD5;";
+			$s = $db->prepare($query);
+			$s->execute();
+			if($s->rows == 0){
+                #print $MD5, "\n";
+				$db->do("delete from `Index` where MD5=$MD5;");
+			}
+		}
+		#----------END OF HACK____________
     }#end run-time loop
     $sth->finish();
     $db->disconnect();

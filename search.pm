@@ -1,7 +1,7 @@
 package search;
 #search.pm
 #copyright 2004, 2005, Jason Whitehorn
-my $version = "0.7.10";
+my $version = "0.7.11";
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -75,7 +75,7 @@ sub search{
 		my $buffer = $search;
 		$buffer =~ s/:/\\:/g;
 		open LOGFILE, ">>$log_file";
-		print LOGFILE time(), ":", $buffer ":";
+		print LOGFILE time(), ":", $buffer, ":";
 	}
     $query = "select Results from `QueryCache` where `Query` = " . $db->quote($search) . ";";
     my $sth = $db->prepare($query);

@@ -15,7 +15,8 @@ my $version = "0.8.0";
 #along with this program; if not, write to the Free Software
 #Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 my $config_file = "senas.cfg";
-
+my $lower_trigger = 9000;	#aim for now fewer in outgoing
+my $upper_limit = 30000;	#do not allow any more than, in outgoing
 
 my $DBPassword;# = "password";
 my $DBHost;# = "127.0.0.1";
@@ -38,6 +39,7 @@ while(<FILE>){
 	}
 }
 close FILE;
+my $add_links = 1;	#not for you
 
 use DBI;    #only works with transactional MySQL
 use Digest::MD5 qw(md5_hex);
@@ -87,7 +89,7 @@ sub Ranker{
 		$sth->execute();
 		$elements = $sth->rows;
 		my $URL;
-		print "[DEBUG::Ranker] Beginning ranking $elements elements.\n" unless !$debug;
+		#print "[DEBUG::Ranker] Beginning ranking $elements elements.\n" unless !$debug;
 		while($rows = $sth->fetchrow_arrayref()){
 			$URL = $rows->[0];
 			$MD5 = $rows->[1];
@@ -121,7 +123,7 @@ sub Ranker{
 			foreach(@urls){
 				$rating{$_} = $temp{$_};   #copy back...
 			}
-			print "[DEBUG::Ranker] ", ($i + 1), "/10th done!\n" unless !$debug;
+			#print "[DEBUG::Ranker] ", ($i + 1), "/10th done!\n" unless !$debug;
 		}
 
 		foreach(@urls){
@@ -131,7 +133,7 @@ sub Ranker{
 			$query .= $db->quote($_) . ";";
 			$db->do($query);
 		}
-		print "[DEBUG::Ranker] $elements completed in " . (((time() - $start)/60)/60) . " hours\n" unless !$debug;
+		#print "[DEBUG::Ranker] $elements completed in " . (((time() - $start)/60)/60) . " hours\n" unless !$debug;
 	}
 	$sth->finish;
 	$db->disconnect();
@@ -144,7 +146,7 @@ if( $run_ranker) {
 
 do{
     $db = DBI->connect("DBI:mysql:$DB:$DBHost", "$DBUser", "$DBPassword") or die "Error connection!\n";
-    while($running){   #run-time loop
+    while($running){   #run-time loop		
         $db->do("begin;");  #start transaction
         $query = "select URL, Data, LastSeen, Action, Type from incoming order by LastSeen asc limit 1";
         $sth = $db->prepare($query);
@@ -195,11 +197,13 @@ do{
                     $sth->execute();
                     if($type =~ m/^text\/html/){  
                         #if document is HTML...remove any links <a href=...
+						print "[DEBUG::oracle] item is text/html.\n" unless !$debug;
                         $data =~ m/<title>(.*)<\/title>/gi;
                         my $title = $1;
                         $query = "update `Index` set Title=" . $db->quote($title) . " where MD5=";
                         $query .= $db->quote($MD5) . ";";
                         $db->do($query);
+						
                         while($data =~ m/<a[^>]*href=([^>]*)>/gi){
                             my $link = $1;
                             #start striping links from the page we just got
@@ -209,23 +213,25 @@ do{
                             $link = URI->new_abs($link, $url);  
                             $link = URI->new($link)->canonical;
                             $link =~ s/\#.*//g;     #no pound signs
-                            $query = "select LastSeen from Sources where URL=";
-                            $query .= $db->quote($link) . ";";
-                            $sth = $db->prepare($query);
-                            $sth->execute();
-                            if($sth->rows == 0){
-                                #we have NEVER been here..
-                                $query = "select Priority from outgoing where URL=";
-                                $query .= $db->quote($link) . ";";
-                                $sth = $db->prepare($query);
-                                $sth->execute();
-                                if($sth->rows == 0){
-                                    #insert into outgoing
-                                    $query = "insert into outgoing (URL) values (";
-                                    $query .= $db->quote($link) . ");";
-                                    $db->do($query);
-                                }
-                            }#otherwise...we will get back to it later
+							if($add_links){	#only if we are adding links to our outgoing table
+								$query = "select LastSeen from Sources where URL=";
+								$query .= $db->quote($link) . ";";
+								$sth = $db->prepare($query);
+								$sth->execute();
+								if($sth->rows == 0){
+									#we have NEVER been here..
+									$query = "select Priority from outgoing where URL=";
+									$query .= $db->quote($link) . ";";
+									$sth = $db->prepare($query);
+									$sth->execute();
+									if($sth->rows == 0){
+										#insert into outgoing
+										$query = "insert into outgoing (URL) values (";
+										$query .= $db->quote($link) . ");";
+										$db->do($query);
+									}
+								}#otherwise...we will get back to it later
+							}
 							
 							#insert links into Links for ranking pages
 							$query = "insert into Links (Source, Target) values (";
@@ -247,9 +253,11 @@ do{
                             $query = "Insert into WordIndex (MD5, Word, Location, Source) values (";
                             $query .= $db->quote($MD5) . ", " . $db->quote(lc($word)) . ", $i, 1);";
                             $db->do($query);
-                            $i++
+                            $i++;
                         }
-                    }
+                    }else{
+							print "[DEBUG::oracle] item is NOT text/html, I don't know what to do yet.\n" unless !$debug;
+					}
                     #obviously we do not know of this source....so put it in sources
                     $query = "insert into Sources (URL, MD5, LastSeen, Type) values (";
                     $query .= $db->quote($url) . ", " . $db->quote($MD5) . ", $LastSeen, ";
@@ -287,6 +295,16 @@ do{
         }else{  #if there is nothing in the incoming table
             print "[DEBUG::oracle] Nothing to do, sleeping\n" unless !$debug;
             sleep 60 * 2; #we will sleep a little extra this time around...
+			$query = "select MD5 from `Sources`;";
+			$sth = $db->prepare($query);
+			$sth->execute();	#see if we are going to be adding links to outgoing.
+			if($sth->rows < $lower_trigger){
+				$add_links = 1;	#do add to outgoing;
+			}else{
+				if($sth->rows > $upper_limit){
+					$add_links = 0;
+				}
+			}
         }
         $db->do("commit;");
         $query = "delete from `QueryCache` where `Expire` < " . time() . ";"; 

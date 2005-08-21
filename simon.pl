@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 #simon, web spider
 #Copyright 2004, 2005, Jason Whitehorn
-my $version = 2.0.2;
+my $version = 2.0.3;
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -67,6 +67,10 @@ while($running){
     if($sth->rows == 1){
         $rows = $sth->fetchrow_arrayref();
         $url = $rows->[0];
+        $query = "delete from outgoing where URL=";
+        $query .= $db->quote($url) . ";";
+        $db->do($query);
+        $db->do("commit;");		
         print "Getting $url...";
         $reply = $robot->get($url);	#attempt to get URL	
         if($reply->is_success){
@@ -86,12 +90,12 @@ while($running){
             $query .= $db->quote($url) . ", $action_fail);";
             $db->quote($query);
         }
-        $query = "delete from outgoing where URL=";
-        $query .= $db->quote($url) . ";";
-        $db->do($query);
-        $db->do("commit;");
+#        $query = "delete from outgoing where URL=";
+#        $query .= $db->quote($url) . ";";
+#        $db->do($query);
+#        $db->do("commit;");
     }else{
-        $db->do("commit;");
+        #$db->do("commit;");
         #nothing to do
         sleep 30;
     }

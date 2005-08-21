@@ -57,12 +57,13 @@ my $db = DBI->connect("DBI:mysql:$mysql_db:$mysql_server", $mysql_user, $mysql_p
     
 my $action_fail = 1;
 my $action_update = 0;
-
+srand(time());
 while($running){
 	#run-time loop
-	my $key = int(rand()*3456789);
+	#my $key = int(rand()*4294967295);
+	my $key = int(rand()*345789);
     $db->do("begin;");
-    $query = "select URL from outgoing where Rand<$key order by Priority desc limit 1;";
+    $query = "select URL from outgoing where id<$key order by Priority desc limit 1;";
     $sth = $db->prepare($query);
     $sth->execute();
     if($sth->rows == 1){

@@ -4,7 +4,7 @@
 #
 # Host: 192.168.1.2 (MySQL 4.0.18-log)
 # Database: search
-# Generation Time: 2005-08-21 15:26:16 -0500
+# Generation Time: 2005-08-21 15:34:44 -0500
 # ************************************************************
 
 # Dump of table Index
@@ -103,7 +103,8 @@ DROP TABLE IF EXISTS `outgoing`;
 CREATE TABLE `outgoing` (
   `URL` mediumblob,
   `Priority` smallint(6) default '0',
-  `Rand` bigint(32) unsigned default NULL
+  `id` bigint(32) unsigned NOT NULL auto_increment,
+  PRIMARY KEY  (`id`)
 ) TYPE=MyISAM;
 
 

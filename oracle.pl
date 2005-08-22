@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #The oracle copyright 2004, 2005, Jason Whitehorn
-my $version = "0.8.0";  
+my $version = "0.8.1";  
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -14,9 +14,12 @@ my $version = "0.8.0";
 #You should have received a copy of the GNU General Public License
 #along with this program; if not, write to the Free Software
 #Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 my $config_file = "senas.cfg";
-my $lower_trigger = 9000;	#aim for now fewer in outgoing
-my $upper_limit = 30000;	#do not allow any more than, in outgoing
+my $lower_trigger = 9000;					#aim for now fewer in outgoing
+my $upper_limit = 30000;					#do not allow any more than, in outgoing
+my @parsers = ("./mime_parsers/html.pl");	#put your MIME-type parsers here!
+
 
 my $DBPassword;# = "password";
 my $DBHost;# = "127.0.0.1";
@@ -59,6 +62,16 @@ my $revisit_in = (30 * 24 * 60 * 60);   #30 days....DUN DUN DUNNN!!!!
 $running = 1;
 share($running);
 share($debug);
+sub load_handler{
+        my $filename = $_[0];
+        my $data;
+        open FILE, "<$filename";
+		while(<FILE>){
+                $data = $data . $_;
+        }
+        close FILE;
+        eval($data);
+}
 sub inputReader{
     #if child
     while(1){
@@ -195,68 +208,22 @@ do{
                     $query .= $db->quote($MD5) . ", " . $db->quote($data) . ", " . length($data) . ");";
                     $sth = $db->prepare($query);
                     $sth->execute();
-                    if($type =~ m/^text\/html/){  
-                        #if document is HTML...remove any links <a href=...
-						print "[DEBUG::oracle] item is text/html.\n" unless !$debug;
-                        $data =~ m/<title>(.*)<\/title>/gi;
-                        my $title = $1;
-                        $query = "update `Index` set Title=" . $db->quote($title) . " where MD5=";
-                        $query .= $db->quote($MD5) . ";";
-                        $db->do($query);
-						
-                        while($data =~ m/<a[^>]*href=([^>]*)>/gi){
-                            my $link = $1;
-                            #start striping links from the page we just got
-                            $link =~ s/^["']//;
-                            $link =~ s/['"].*//;
-                            $link =~ s/\/$//g;
-                            $link = URI->new_abs($link, $url);  
-                            $link = URI->new($link)->canonical;
-                            $link =~ s/\#.*//g;     #no pound signs
-							if($add_links){	#only if we are adding links to our outgoing table
-								$query = "select LastSeen from Sources where URL=";
-								$query .= $db->quote($link) . ";";
-								$sth = $db->prepare($query);
-								$sth->execute();
-								if($sth->rows == 0){
-									#we have NEVER been here..
-									$query = "select Priority from outgoing where URL=";
-									$query .= $db->quote($link) . ";";
-									$sth = $db->prepare($query);
-									$sth->execute();
-									if($sth->rows == 0){
-										#insert into outgoing
-										$query = "insert into outgoing (URL) values (";
-										$query .= $db->quote($link) . ");";
-										$db->do($query);
-									}
-								}#otherwise...we will get back to it later
-							}
-							
-							#insert links into Links for ranking pages
-							$query = "insert into Links (Source, Target) values (";
-							$query .= $db->quote($MD5) . ", ";
-							$query .= $db->quote($link) . ");";
-							$db->do($query);
-                        }
-                        $page = $data;  #make a copy
-                        $page =~ s/\n//g;
-                        $page =~ m/<body[^>]*>(.*)<\/body>/gi;
-                        my $body = $1;
-                        $body =~ s/<[^>]*>/ /g;
-                        $body =~ s/&[^ ]* / /g;
-                        $body =~ s/[^a-zA-Z0-9 ]/ /g;
-                        $i = 0;
-                        while($body =~ m/([^ ]+)/g){
-                            #index Words...
-                            $word = $1;
-                            $query = "Insert into WordIndex (MD5, Word, Location, Source) values (";
-                            $query .= $db->quote($MD5) . ", " . $db->quote(lc($word)) . ", $i, 1);";
-                            $db->do($query);
-                            $i++;
-                        }
-                    }else{
-							print "[DEBUG::oracle] item is NOT text/html, I don't know what to do yet.\n" unless !$debug;
+					$found_handler = 0;
+					#if($type =~ m/text\/html/i){
+					#	$found_handler = 1;
+					#	load_handler($parsers[0]);
+					#	handler($db, $data, $url, $MD5);
+					#}
+					foreach(@parsers){
+						print "[DEBUG::oracle] Loading handler $_\n" unless !$debug;
+						load_handler($_);
+						if(handler_type() == $type){
+							$found_handler = 1;
+							handler($db, $data, $url, $MD5);
+						}
+					}
+                    if($found_handler == 0){
+							print "[DEBUG::oracle] No parser found for MIME type: $type\n" unless !$debug;
 					}
                     #obviously we do not know of this source....so put it in sources
                     $query = "insert into Sources (URL, MD5, LastSeen, Type) values (";
@@ -334,6 +301,7 @@ do{
     print "DONE\n";
     exit(1);
 }
+
 #main program
 #my $pid = fork();
 #if(!defined($pid)){

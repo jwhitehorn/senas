@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 #simon, web spider
 #Copyright 2004, 2005, Jason Whitehorn
-my $version = 2.0.3;
+my $version = 2.0.4;
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -63,7 +63,13 @@ while($running){
 	#my $key = int(rand()*4294967295);
 	my $key = int(rand()*345789);
     $db->do("begin;");
-    $query = "select URL from outgoing where id<$key order by Priority desc limit 1;";
+	if($toggle){
+		$query = "select URL from outgoing where id<$key order by Priority desc limit 1;";
+		$toggle = 0;
+	}else{
+		$query = "select URL from outgoing where id>$key order by Priority desc limit 1;";
+		$toggle = 1;
+	}
     $sth = $db->prepare($query);
     $sth->execute();
     if($sth->rows == 1){
@@ -103,4 +109,4 @@ while($running){
     }
 }
 
-
+sub handler_

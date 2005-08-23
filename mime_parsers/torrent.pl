@@ -13,6 +13,7 @@ sub handler{
 	my $url	= $_[2];		#url
 	my $MD5 = $_[3];
 	
+	my $i;
 	$data =~ m/name([0-9]+):([^:]*)/;
 	my $title = substr($2, 0, $1);
 	my $comment = "";
@@ -28,8 +29,8 @@ sub handler{
 	my $query = "update `Index` set Title=" . $db->quote($title) . " where MD5=";
 	$query .= $db->quote($MD5) . ";";
 	$db->do($query);
-	print "[DEBUG::Parser] APPLICATION::X-BITTORRENT got called!\n";
-
+	print "[DEBUG::Parser] APPLICATION::X-BITTORRENT got called!\n" unless !$debug;
+	$i = 0;
 	while($comment =~ m/([^ ]+)/g){
 		#index Words...
 		$word = $1;

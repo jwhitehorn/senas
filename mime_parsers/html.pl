@@ -1,0 +1,75 @@
+################################################################
+#######            text/html mime type parser            #######
+################################################################
+
+use URI;	#for link absolution
+
+sub handler_type{
+	my $MIMEtype = "text/html";	#we process HTML
+	return $MIMEtype;
+}
+
+sub handler{
+	my $db = $_[0];			#database handler
+	my $data = $_[1];		#data (ie, page) in question
+	my $url	= $_[2];		#url
+	my $MD5 = $_[3];
+
+	$data =~ m/<title>(.*)<\/title>/gi;		#pull title
+	my $title = $1;
+	my $query = "update `Index` set Title=" . $db->quote($title) . " where MD5=";
+	$query .= $db->quote($MD5) . ";";
+	$db->do($query);
+	print "[DEBUG::Parser] TEXT::HTML got called!\n";
+	while($data =~ m/<a[^>]*href=([^>]*)>/gi){
+		my $link = $1;
+		#start striping links from the page we just got
+		$link =~ s/^["']//;
+		$link =~ s/['"].*//;
+		$link =~ s/\/$//g;
+		$link = URI->new_abs($link, $url);  
+		$link = URI->new($link)->canonical;
+		$link =~ s/\#.*//g;     #no pound signs
+		if($add_links){	#only if we are adding links to our outgoing table
+			$query = "select LastSeen from Sources where URL=";
+			$query .= $db->quote($link) . ";";
+			$sth = $db->prepare($query);
+			$sth->execute();
+			if($sth->rows == 0){
+				#we have NEVER been here..
+				$query = "select Priority from outgoing where URL=";
+				$query .= $db->quote($link) . ";";
+				$sth = $db->prepare($query);
+				$sth->execute();
+				if($sth->rows == 0){
+					#insert into outgoing
+					$query = "insert into outgoing (URL) values (";
+					$query .= $db->quote($link) . ");";
+					$db->do($query);
+				}
+			}#otherwise...we will get back to it later
+		}
+		
+		#insert links into Links for ranking pages
+		$query = "insert into Links (Source, Target) values (";
+		$query .= $db->quote($MD5) . ", ";
+		$query .= $db->quote($link) . ");";
+		$db->do($query);
+	}
+	$page = $data;  #make a copy
+	$page =~ s/\n//g;
+	$page =~ m/<body[^>]*>(.*)<\/body>/gi;
+	my $body = $1;
+	$body =~ s/<[^>]*>/ /g;
+	$body =~ s/&[^ ]* / /g;
+	$body =~ s/[^a-zA-Z0-9 ]/ /g;
+	$i = 0;
+	while($body =~ m/([^ ]+)/g){
+		#index Words...
+		$word = $1;
+		$query = "Insert into WordIndex (MD5, Word, Location, Source) values (";
+		$query .= $db->quote($MD5) . ", " . $db->quote(lc($word)) . ", $i, 1);";
+		$db->do($query);
+		$i++;
+	}
+}

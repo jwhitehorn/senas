@@ -304,7 +304,7 @@ sub display{
     #print "</div>";
     print "<center>";
     print "<div class=\"comment\">Search.pm version $version :: Copyright 2004-2005 ";
-    print "<a href=\"http://www.whitehorndesign.net/\">Jason Whitehorn</a>, ";
+    print "<a href=\"mailto:jason.whitehorn@gmail.com\">Jason Whitehorn</a>, ";
 	print "<a href=\"http://senas.sourceforge.net/\">source code</a> distributed under the";
 	print "<a href=\"http://www.gnu.org/licenses/gpl.html\">GNU GPL</a></div></center>";
 }

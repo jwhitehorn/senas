@@ -14,6 +14,9 @@ sub handler{
 	my $data = $_[1];		#data (ie, page) in question
 	my $url	= $_[2];		#url
 	my $MD5 = $_[3];
+	
+	my $link_limit = 10;	#pull no more than 40 links from each page
+	my $pulled_links = 0;	#none yet
 
 	$data =~ m/<title>(.*)<\/title>/gi;		#pull title
 	my $title = $1;
@@ -21,7 +24,7 @@ sub handler{
 	$query .= $db->quote($MD5) . ";";
 	$db->do($query);
 	print "[DEBUG::Parser] TEXT::HTML got called!\n";
-	while($data =~ m/<a[^>]*href=([^>]*)>/gi){
+	while(  ($pulled_links < $link_limit) and ($data =~ m/<a[^>]*href=([^>]*)>/gi) ){
 		my $link = $1;
 		#start striping links from the page we just got
 		$link =~ s/^["']//;
@@ -57,6 +60,7 @@ sub handler{
 		$query .= $db->quote($MD5) . ", ";
 		$query .= $db->quote($link) . ");";
 		$db->do($query);
+		$pulled_links++;
 	}
 	$page = $data;  #make a copy
 	$page =~ s/\n//g;

@@ -37,11 +37,13 @@ sub handler{
 			$sth->execute();
 			if($sth->rows == 0){
 				#we have NEVER been here..
-				$query = "select Priority from outgoing where URL=";
+				#$query = "select Priority from outgoing where URL=";
+				$query = "select count(*) from outgoing where URL=";
 				$query .= $db->quote($link) . ";";
 				$sth = $db->prepare($query);
 				$sth->execute();
-				if($sth->rows == 0){
+				$query = $sth->fetchrow_arrayref();
+				if($query->[0] == 0){
 					#insert into outgoing
 					$query = "insert into outgoing (URL) values (";
 					$query .= $db->quote($link) . ");";

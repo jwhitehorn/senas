@@ -230,7 +230,7 @@ do{
                     $query .= $db->quote($url) . ", " . $db->quote($MD5) . ", $LastSeen, ";
                     $query .= $db->quote($type) . ");";
 					$db->do($query);
-                }else{
+                }else{   #we have seen this data before
                     $query = "select MD5 from Sources where MD5=";
                     $query .= $db->quote($MD5) . ";";
                     $sth = $db->prepare($query);

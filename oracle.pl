@@ -18,7 +18,6 @@ my $version = "0.8.1";
 my $config_file = "senas.cfg";
 my @parsers = ("./mime_parsers/html.pl");	#put your MIME-type parsers here!
 
-
 my $DBPassword;# = "password";
 my $DBHost;# = "127.0.0.1";
 my $DB;# = "search";
@@ -59,6 +58,7 @@ my $revisit_in = (30 * 24 * 60 * 60);   #30 days....DUN DUN DUNNN!!!!
 $running = 1;
 share($running);
 share($debug);
+
 sub load_handler{
         my $filename = $_[0];
         my $data;
@@ -206,16 +206,16 @@ do{
 
 					#find a parser for the particular MIME type
 					$found_handler = 0;	#we have not found a handler yet, so don't assume anything
-					foreach(@parsers){
-						print "[DEBUG::oracle] Loading handler ", $_, "\n" unless !$debug;
-						load_handler($_);
+					foreach $handler (@parsers){
+						print "[DEBUG::oracle] Loading handler ", $handler, "\n" unless !$debug;
+						load_handler($handler);
 						if(handler_type() == $type){
 							$found_handler = 1;
 							handler($db, $data, $url, $MD5);
 						}
 					}
                     if($found_handler == 0){
-							print "[DEBUG::oracle] No parser found for MIME type: $type\n" unless !$debug;
+							print "[DEBUG::oracle] -->> No parser found for MIME type: $type\n" unless !$debug;
 					}
                     #obviously we do not know of this source....so put it in sources
 					$query = "insert into Sources (URL, MD5, LastSeen, Type) values (";
@@ -260,28 +260,6 @@ do{
         $db->do("commit;");
         $query = "delete from `QueryCache` where `Expire` < " . time() . ";"; 
         $db->do($query);    #delete outdated query cache entries
-		#---------HACK below!!!------
-#		if($use_hack){
-#			print "[DEBUG::oracle] 300 off, 1 on hack begun!\n" unless !$debug;
-#			$query = "select MD5 from `Index`;";
-#			$sth = $db->prepare($query);
-#			$sth->execute();
-#			while($row = $sth->fetchrow_arrayref()){
-#				my $MD5 = $db->quote($row->[0]);
-#				$query = "select MD5 from `Sources` where MD5=$MD5;";
-#				$s = $db->prepare($query);
-#				$s->execute();
-#				if($s->rows == 0){
-#					#print $MD5, "\n";
-#					$db->do("delete from `Index` where MD5=$MD5;");
-#					$db->do("delete from WordIndex where MD5=$MD5;");
-#					$db->do("delete from Links where Source=$MD5;");
-#				}
-#			}
-#			$use_hack = 0;
-#			exit;
-	#	}
-		#----------END OF HACK____________
     }#end run-time loop
     $sth->finish();
     $db->disconnect();

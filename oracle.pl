@@ -16,8 +16,8 @@ my $version = "0.8.1";
 #Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 my $config_file = "senas.cfg";
-my $lower_trigger = 9000;					#aim for now fewer in outgoing
-my $upper_limit = 30000;					#do not allow any more than, in outgoing
+#my $lower_trigger = 9000;					#aim for now fewer in outgoing
+#my $upper_limit = 30000;					#do not allow any more than, in outgoing
 my @parsers = ("./mime_parsers/html.pl");	#put your MIME-type parsers here!
 
 
@@ -151,7 +151,9 @@ sub Ranker{
 	$sth->finish;
 	$db->disconnect();
 }
-
+print "Project Senas, copyright 2004, 2005, Jason Whitehorn.\n";
+print "oracle version $version\n";
+print "\tTo shutdown, type 'stop'\n\n";
 $Ithread = threads->new(\&inputReader) or die "Error creating I thread.\n";
 if( $run_ranker) {
 	$Rthread = threads->new(\&Ranker) or die "Error creating Ranker thread.\n";
@@ -164,8 +166,7 @@ do{
         $query = "select URL, Data, LastSeen, Action, Type from incoming order by LastSeen asc limit 1";
         $sth = $db->prepare($query);
         $sth->execute();
-        if($sth->rows > 0){
-            #if the oracle has something to do!!!!
+        if($sth->rows > 0){	#if the oracle has something to do!!!!
             print "[DEBUG::oracle] Something to do!\n" unless !$debug;
             $rows = $sth->fetchrow_arrayref();
             my $url = $rows->[0];
@@ -186,13 +187,10 @@ do{
 					$lnk = $db->quote($url);
 					$s = $db->prepare("select MD5 from `Sources` where URL=$lnk;");
 					$s->execute();
-					if($s->rows > 0){	#we have seen this URL before, and it has changed.
-					#	remove_source($url);
-						#print $query, "\n";
-						#print "select MD5 from `Sources` where URL=$lnk;\n";
-					
-						$dup = $s->fetchrow_array();
-						$chk = $db->quote($dup[0]);
+					if($s->rows > 0){	#we have seen this URL before, and it has changed.			
+						$dup = $s->fetchrow_arrayref();
+						$chk = $db->quote($dup->[0]);
+						print "[DEBUG::oracle] Dup. entry, deleting MD5=", $dup->[0], "\n" unless !$debug;
 						$db->do("delete from `Sources` where URL=$lnk;");	#remove this old entry
 						$s = $db->prepare("select MD5 from `Sources` where MD5=$chk;");
 						$s->execute();
@@ -207,15 +205,12 @@ do{
                     $query = "insert into `Index` (MD5, Cache, TSize) values (";
                     $query .= $db->quote($MD5) . ", " . $db->quote($data) . ", " . length($data) . ");";
                     $sth = $db->prepare($query);
-                    $sth->execute();
-					$found_handler = 0;
-					#if($type =~ m/text\/html/i){
-					#	$found_handler = 1;
-					#	load_handler($parsers[0]);
-					#	handler($db, $data, $url, $MD5);
-					#}
+                    $sth->execute();	#insert into index....
+
+					#find a parser for the particular MIME type
+					$found_handler = 0;	#we have not found a handler yet, so don't assume anything
 					foreach(@parsers){
-						print "[DEBUG::oracle] Loading handler $_\n" unless !$debug;
+						print "[DEBUG::oracle] Loading handler ", $_, "\n" unless !$debug;
 						load_handler($_);
 						if(handler_type() == $type){
 							$found_handler = 1;
@@ -226,10 +221,10 @@ do{
 							print "[DEBUG::oracle] No parser found for MIME type: $type\n" unless !$debug;
 					}
                     #obviously we do not know of this source....so put it in sources
-                    $query = "insert into Sources (URL, MD5, LastSeen, Type) values (";
+					$query = "insert into Sources (URL, MD5, LastSeen, Type) values (";
                     $query .= $db->quote($url) . ", " . $db->quote($MD5) . ", $LastSeen, ";
                     $query .= $db->quote($type) . ");";
-					$db->do($query);
+					$db->do($query);	#insert into sources
                 }else{   #we have seen this data before
                     $query = "select MD5 from Sources where MD5=";
                     $query .= $db->quote($MD5) . ";";
@@ -262,36 +257,41 @@ do{
         }else{  #if there is nothing in the incoming table
             print "[DEBUG::oracle] Nothing to do, sleeping\n" unless !$debug;
             sleep 60 * 2; #we will sleep a little extra this time around...
-			$query = "select MD5 from `Sources`;";
-			$sth = $db->prepare($query);
-			$sth->execute();	#see if we are going to be adding links to outgoing.
-			if($sth->rows < $lower_trigger){
-				$add_links = 1;	#do add to outgoing;
-			}else{
-				if($sth->rows > $upper_limit){
-					$add_links = 0;
-				}
-			}
+#			$query = "select MD5 from `Sources`;";
+#			$sth = $db->prepare($query);
+#			$sth->execute();	#see if we are going to be adding links to outgoing.
+#			if($sth->rows < $lower_trigger){
+#				$add_links = 1;	#do add to outgoing;
+#			}else{
+#				if($sth->rows > $upper_limit){
+#					$add_links = 0;
+#				}
+#			}
         }
         $db->do("commit;");
         $query = "delete from `QueryCache` where `Expire` < " . time() . ";"; 
         $db->do($query);    #delete outdated query cache entries
 		#---------HACK below!!!------
-		$query = "select MD5 from `Index`;";
-		$sth = $db->prepare($query);
-		$sth->execute();
-		while($row = $sth->fetchrow_arrayref()){
-			my $MD5 = $db->quote($row->[0]);
-			$query = "select MD5 from `Sources` where MD5=$MD5;";
-			$s = $db->prepare($query);
-			$s->execute();
-			if($s->rows == 0){
-                #print $MD5, "\n";
-				$db->do("delete from `Index` where MD5=$MD5;");
-				$db->do("delete from WordIndex where MD5=$MD5;");
-				$db->do("delete from Links where Source=$MD5;");
-			}
-		}
+#		if($use_hack){
+#			print "[DEBUG::oracle] 300 off, 1 on hack begun!\n" unless !$debug;
+#			$query = "select MD5 from `Index`;";
+#			$sth = $db->prepare($query);
+#			$sth->execute();
+#			while($row = $sth->fetchrow_arrayref()){
+#				my $MD5 = $db->quote($row->[0]);
+#				$query = "select MD5 from `Sources` where MD5=$MD5;";
+#				$s = $db->prepare($query);
+#				$s->execute();
+#				if($s->rows == 0){
+#					#print $MD5, "\n";
+#					$db->do("delete from `Index` where MD5=$MD5;");
+#					$db->do("delete from WordIndex where MD5=$MD5;");
+#					$db->do("delete from Links where Source=$MD5;");
+#				}
+#			}
+#			$use_hack = 0;
+#			exit;
+	#	}
 		#----------END OF HACK____________
     }#end run-time loop
     $sth->finish();

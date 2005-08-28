@@ -16,8 +16,6 @@ my $version = "0.8.1";
 #Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 my $config_file = "senas.cfg";
-#my $lower_trigger = 9000;					#aim for now fewer in outgoing
-#my $upper_limit = 30000;					#do not allow any more than, in outgoing
 my @parsers = ("./mime_parsers/html.pl");	#put your MIME-type parsers here!
 
 
@@ -42,7 +40,6 @@ while(<FILE>){
 	}
 }
 close FILE;
-my $add_links = 1;	#not for you
 
 use DBI;    #only works with transactional MySQL
 use Digest::MD5 qw(md5_hex);
@@ -102,7 +99,7 @@ sub Ranker{
 		$sth->execute();
 		$elements = $sth->rows;
 		my $URL;
-		#print "[DEBUG::Ranker] Beginning ranking $elements elements.\n" unless !$debug;
+		print "[DEBUG::Ranker] Beginning ranking $elements elements.\n" unless !$debug;
 		while($rows = $sth->fetchrow_arrayref()){
 			$URL = $rows->[0];
 			$MD5 = $rows->[1];
@@ -136,7 +133,7 @@ sub Ranker{
 			foreach(@urls){
 				$rating{$_} = $temp{$_};   #copy back...
 			}
-			#print "[DEBUG::Ranker] ", ($i + 1), "/10th done!\n" unless !$debug;
+			print "[DEBUG::Ranker] ", ($i + 1), "/10th done!\n" unless !$debug;
 		}
 
 		foreach(@urls){
@@ -146,12 +143,12 @@ sub Ranker{
 			$query .= $db->quote($_) . ";";
 			$db->do($query);
 		}
-		#print "[DEBUG::Ranker] $elements completed in " . (((time() - $start)/60)/60) . " hours\n" unless !$debug;
+		print "[DEBUG::Ranker] $elements completed in " . (((time() - $start)/60)/60) . " hours\n" unless !$debug;
 	}
 	$sth->finish;
 	$db->disconnect();
 }
-print "Project Senas, copyright 2004, 2005, Jason Whitehorn.\n";
+print "Project Senas (http://www.senas.org), copyright 2004, 2005, Jason Whitehorn.\n";
 print "oracle version $version\n";
 print "\tTo shutdown, type 'stop'\n\n";
 $Ithread = threads->new(\&inputReader) or die "Error creating I thread.\n";
@@ -257,16 +254,8 @@ do{
         }else{  #if there is nothing in the incoming table
             print "[DEBUG::oracle] Nothing to do, sleeping\n" unless !$debug;
             sleep 60 * 2; #we will sleep a little extra this time around...
-#			$query = "select MD5 from `Sources`;";
-#			$sth = $db->prepare($query);
-#			$sth->execute();	#see if we are going to be adding links to outgoing.
-#			if($sth->rows < $lower_trigger){
-#				$add_links = 1;	#do add to outgoing;
-#			}else{
-#				if($sth->rows > $upper_limit){
-#					$add_links = 0;
-#				}
-#			}
+			
+			#insert into outgoing sources we have not seen in $revisit_in time!
         }
         $db->do("commit;");
         $query = "delete from `QueryCache` where `Expire` < " . time() . ";"; 

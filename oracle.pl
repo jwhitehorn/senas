@@ -43,8 +43,8 @@ close FILE;
 use DBI;    #only works with transactional MySQL
 use Digest::MD5 qw(md5_hex);
 use URI;	#for link absolution
-use threads;
-use threads::shared;
+#use threads;
+#use threads::shared;
 my $debug = 1;		#output debug messages to console
 my $run_ranker = 1;	#run page ranker thread
 
@@ -56,8 +56,8 @@ my $action_update = 0;
 
 my $revisit_in = (30 * 24 * 60 * 60);   #30 days....DUN DUN DUNNN!!!!
 $running = 1;
-share($running);
-share($debug);
+#share($running);
+#share($debug);
 
 sub load_handler{
         my $filename = $_[0];
@@ -150,11 +150,11 @@ sub Ranker{
 }
 print "Project Senas (http://www.senas.org), copyright 2004, 2005, Jason Whitehorn.\n";
 print "oracle version $version\n";
-print "\tTo shutdown, type 'stop'\n\n";
-$Ithread = threads->new(\&inputReader) or die "Error creating I thread.\n";
-if( $run_ranker) {
-	$Rthread = threads->new(\&Ranker) or die "Error creating Ranker thread.\n";
-}
+#print "\tTo shutdown, type 'stop'\n\n";
+#$Ithread = threads->new(\&inputReader) or die "Error creating I thread.\n";
+#if( $run_ranker) {
+#	$Rthread = threads->new(\&Ranker) or die "Error creating Ranker thread.\n";
+#}
 
 do{
     $db = DBI->connect("DBI:mysql:$DB:$DBHost", "$DBUser", "$DBPassword") or die "Error connection!\n";

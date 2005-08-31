@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #The oracle copyright 2004, 2005, Jason Whitehorn
-my $version = "0.8.1";  
+my $version = "0.8.1a";  
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -45,7 +45,7 @@ use Digest::MD5 qw(md5_hex);
 use URI;	#for link absolution
 #use threads;
 #use threads::shared;
-my $debug = 1;		#output debug messages to console
+my $debug = 1;		#output debug messages to console, and runs inputReader
 my $run_ranker = 1;	#run page ranker thread
 
 
@@ -148,15 +148,17 @@ sub Ranker{
 	$sth->finish;
 	$db->disconnect();
 }
-print "Project Senas (http://www.senas.org), copyright 2004, 2005, Jason Whitehorn.\n";
-print "oracle version $version\n";
-#print "\tTo shutdown, type 'stop'\n\n";
+if($debug){
+	print "Project Senas (http://www.senas.org), copyright 2004, 2005, Jason Whitehorn.\n";
+	print "oracle version $version\n";
+	print "\tTo shutdown, type 'stop'\n\n";
+}
 #$Ithread = threads->new(\&inputReader) or die "Error creating I thread.\n";
 #if( $run_ranker) {
 #	$Rthread = threads->new(\&Ranker) or die "Error creating Ranker thread.\n";
 #}
 
-do{
+sub indexer{
     $db = DBI->connect("DBI:mysql:$DB:$DBHost", "$DBUser", "$DBPassword") or die "Error connection!\n";
     while($running){   #run-time loop		
         $db->do("begin;");  #start transaction
@@ -270,16 +272,35 @@ do{
 }
 
 #main program
-#my $pid = fork();
-#if(!defined($pid)){
-#    print "Error spawning child!\n";
-#    exit $!;
-#}
-#if($pid == 0){  #child process
-#    $stop = 0;
-#    my $thread = threads->new(\&index) or die "Error spawning index thread.\n";
-#    while(1){
-#        sleep 60;
-#    }
-#}
-#exit 1; #parent return
+my $pid = fork();
+if(!defined($pid)){
+    print "Error spawning child!\n";
+    exit $!;
+}
+if($pid == 0){  #child process
+    #$stop = 0;
+    #my $thread = threads->new(\&index) or die "Error spawning index thread.\n";
+	indexer();
+    #while(1){
+    #    sleep 60;
+    #}
+}
+my $index_pid = $pid;	#save
+$pid = fork();
+if(!defined($pid)){
+    print "Error spawning child!\n";
+    exit $!;
+}
+if($pid == 0){  #child process
+   if($run_ranker){
+        Ranker();
+	}
+}
+my $ranker_pid = $pid;
+if($debug){
+	inputReader();
+	#sleep 360;
+	#kill $index_pid;
+	#kill $ranker_pid;
+}     
+exit 1; #parent return

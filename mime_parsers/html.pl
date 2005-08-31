@@ -33,28 +33,25 @@ sub handler{
 		$link = URI->new_abs($link, $url);  
 		$link = URI->new($link)->canonical;
 		$link =~ s/\#.*//g;     #no pound signs
-		if($add_links){	#only if we are adding links to our outgoing table
-			$query = "select LastSeen from Sources where URL=";
-			$query .= $db->quote($link) . ";";
-			$sth = $db->prepare($query);
-			$sth->execute();
-			if($sth->rows == 0){
-				#we have NEVER been here..
-				#$query = "select Priority from outgoing where URL=";
-				$query = "select count(*) from outgoing where URL=";
-				$query .= $db->quote($link) . ";";
-				$sth = $db->prepare($query);
-				$sth->execute();
-				$query = $sth->fetchrow_arrayref();
-				if($query->[0] == 0){
-					#insert into outgoing
-					$query = "insert into outgoing (URL) values (";
-					$query .= $db->quote($link) . ");";
-					$db->do($query);
-				}
-			}#otherwise...we will get back to it later
-		}
-		
+		$query = "select LastSeen from Sources where URL=";
+		$query .= $db->quote($link) . ";";
+		$sth = $db->prepare($query);
+		$sth->execute();
+		if($sth->rows == 0){
+		#we have NEVER been here..
+		#$query = "select Priority from outgoing where URL=";
+						$query = "select count(*) from outgoing where URL=";
+						$query .= $db->quote($link) . ";";
+						$sth = $db->prepare($query);
+						$sth->execute();
+						$query = $sth->fetchrow_arrayref();
+						if($query->[0] == 0){
+		#insert into outgoing
+							$query = "insert into outgoing (URL) values (";
+							$query .= $db->quote($link) . ");";
+							$db->do($query);
+						}
+		}#otherwise...we will get back to it later	
 		#insert links into Links for ranking pages
 		$query = "insert into Links (Source, Target) values (";
 		$query .= $db->quote($MD5) . ", ";

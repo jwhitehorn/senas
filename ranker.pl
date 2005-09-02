@@ -115,6 +115,7 @@ sub Ranker{
 			$db->do($query);
 		}
 		#print "[DEBUG::Ranker] $elements completed in " . (((time() - $start)/60)/60) . " hours\n" unless !$debug;
+		sleep 60;
 	}
 	$sth->finish;
 	$db->disconnect();

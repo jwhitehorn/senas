@@ -14,8 +14,13 @@ my $version = "1.0";
 #You should have received a copy of the GNU General Public License
 #along with this program; if not, write to the Free Software
 #Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+use DBI;    #only works with transactional MySQL
+use POSIX qw(setsid);
+use Fcntl;
 
+my $pipe = "/home/jason/foo.bar";
 my $config_file = "/etc/senas.cfg";
+
 my $DBPassword;
 my $DBHost;
 my $DB;
@@ -37,11 +42,6 @@ while(<FILE>){
 	}
 }
 close FILE;
-use DBI;    #only works with transactional MySQL
-#!/usr/bin/perl
-use POSIX qw(setsid);
-use Fcntl;
-my $pipe = "/home/jason/foo.bar";
 
 if(lc($ARGV[0]) eq "stop"){
         open FIFO, ">$pipe";
@@ -110,8 +110,12 @@ while(1){
 					while(@row = $sth->fetchrow_array()){
 						if(!($row[0] eq $voter)){
 							$temp{$row[0]} += $rating{$voter} * $converge;
-							if(!$running){
-								return;
+							
+							$command = <FIFO>;	#here is a good time to exit..if
+							if($command =~ m/stop/i){	#we get the stop command
+								$sth->finish;
+								$db->disconnect();
+								exit;   #got stop command!
 							}
 						}
 					}

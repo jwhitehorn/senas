@@ -29,7 +29,7 @@ my $mysql_server;
 my $mysql_pass;
 my $mysql_db;
 
-open FILE, "<$config_file";
+open FILE, "<$config_file" or die $!;
 while(<FILE>){
 	if( $_ =~ m/password=([^;]*);/){
 		$mysql_pass = $1;

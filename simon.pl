@@ -21,30 +21,17 @@ use DBI;
 use POSIX qw(setsid);
 use Fcntl;
 
-my $pipe = "/usr/local/senas/var/simon.pipe";
 my $config_file = "/etc/senas.cfg";
 my $last_save;
-my $mysql_user;
-my $mysql_server;
-my $mysql_pass;
-my $mysql_db;
 
-open FILE, "<$config_file" or die $!;
-while(<FILE>){
-	if( $_ =~ m/password=([^;]*);/){
-		$mysql_pass = $1;
-	}
-	if( $_ =~ m/username=([^;]*);/){
-		$mysql_user = $1;
-	}
-	if( $_ =~ m/host=([^;]*);/){
-		$mysql_server = $1;
-	}
-	if( $_ =~ m/database=([^;]*);/){
-		$mysql_db = $1;
-	}
-}
-close FILE;
+my $password;
+my $username;
+my $host;
+my $database;
+my $path;
+
+do "$config_file" or die "Error opening configuration file.\n";
+my $pipe = $path . "/senas/var/simon.pipe";
 
 my $action_fail = 1;		#const
 my $action_update = 0;		#const
@@ -73,13 +60,14 @@ sysopen(FIFO, "$pipe", O_NONBLOCK|O_RDONLY) or die $!;
 my $robot = LWP::RobotUA->new('simon/2.0', 'admin@mydomain.com');
 $robot->max_size( (60*1024) );	#download upto 60Kbytes
 $robot->max_redirect(0);	#no redirects!
-my $db = DBI->connect("DBI:mysql:$mysql_db:$mysql_server", $mysql_user, $mysql_pass)
+my $db = DBI->connect("DBI:mysql:$database:$host", $username, $password)
     or die "Error connecting to database\n";
 my $command;
 while(1){
         $command = <FIFO>;
         if($command =~ m/stop/i){
 				$db->disconnect();
+				close FIFO;
                 exit;   #got stop command!
         }else{
 			my $key = int(rand()*345789);
@@ -123,6 +111,4 @@ while(1){
         }
         $command = "";
 }
-close FIFO;
-
 #EOF

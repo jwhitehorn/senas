@@ -15,32 +15,18 @@ my $version = "0.7.12";
 #You should have received a copy of the GNU General Public License
 #along with this program; if not, write to the Free Software
 #Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-my $config_file = "senas.cfg";
+my $config_file = "/etc/senas.cfg";
 
-my $log_file = "/var/log/senas.log";
 my $log_queries = 0;	#not by default anyways
   
-my $DBPassword;# = "password";
-my $DBHost;# = "127.0.0.1";
-my $DB;# = "search";
-my $DBUser;# = "username";
-open FILE, "<$config_file";
-while(<FILE>){
-	if( $_ =~ m/password=([^;]*);/){
-		$DBPassword = $1;
-	}
-	if( $_ =~ m/username=([^;]*);/){
-		$DBUser = $1;
-	}
-	if( $_ =~ m/host=([^;]*);/){
-		$DBHost = $1;
-	}
-	if( $_ =~ m/database=([^;]*);/){
-		$DB = $1;
-	}
-}
-close FILE;
+my $password;
+my $username;
+my $host;
+my $database;
+my $path;
 
+do "$config_file" or die "Error opening configuration file.\n";
+my $log_file = $path . "/senas/var/search.log";
 
 use DBI;
 use Time::HiRes qw( gettimeofday tv_interval );
@@ -70,7 +56,7 @@ sub search{
     my $term = 0;
     my $search = $_[0];
     my $start = [gettimeofday];
-    my $db = DBI->connect("DBI:mysql:$DB:$DBHost", "$DBUser", "$DBPassword") or return -1;
+    my $db = DBI->connect("DBI:mysql:$database:$host", "$username", "$password") or return -1;
 	if($log_queries){
 		my $buffer = $search;
 		$buffer =~ s/:/\\:/g;
@@ -194,7 +180,7 @@ sub search2{
     my @results = ();
     my $search = $_[0];
     my $start = [gettimeofday];
-    my $db = DBI->connect("DBI:mysql:$DB:$DBHost", "$DBUser", "$DBPassword") or return -1;
+    my $db = DBI->connect("DBI:mysql:$database:$host", "$username", "$password") or return -1;
 	my $query;
 	my $term;
 	my $i = 0;
@@ -269,7 +255,7 @@ sub display{
     
     my @prefix = ("", "kilo", "mega", "giga", "tera", "peta");
     
-    my $db = DBI->connect("DBI:mysql:$DB:$DBHost", "$DBUser", "$DBPassword") or return -1;
+    my $db = DBI->connect("DBI:mysql:$database:$host", "$username", "$password") or return -1;
     
     print "<html><head>\n";
     print "<title>";

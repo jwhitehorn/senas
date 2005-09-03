@@ -20,9 +20,9 @@ use DBI;    #only works with transactional MySQL
 use Digest::MD5 qw(md5_hex);
 use URI;	#for link absolution
 
-my $pipe = "/home/jason/foo.bar";
-my $config_file = "senas.cfg";
-my @parsers = ("./mime_parsers/html.pl");	#put your MIME-type parsers here!
+my $pipe = "/usr/local/senas/var/oracle.pipe";
+my $config_file = "/etc/senas.cfg";
+my @parsers = ("/usr/local/senas/lib/html.pl");	#put your MIME-type parsers here!
 my $action_fail = 1;	#const
 my $action_update = 0;	#const
 

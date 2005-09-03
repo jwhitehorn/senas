@@ -195,32 +195,69 @@ sub search2{
     my $search = $_[0];
     my $start = [gettimeofday];
     my $db = DBI->connect("DBI:mysql:$DB:$DBHost", "$DBUser", "$DBPassword") or return -1;
-        my $query;
-        my $term;
-        my $i = 0;
-        my @terms = ();
-        while($search =~ m/([a-zA-Z0-9]+)/g){
-                push @terms, lc($1);
-        }
-        foreach $term (@terms){
-                my @set = ();
-                $i++;
-                $query = "select WordIndex.MD5 from WordIndex, Sources where WordIndex.Word=" . $db->quote($term) . " order by Sources.Rank 
-asc limit 1000;";
-                $sth = $db->prepare($query);
-                $sth->execute();
-                while($result = $sth->fetchrow_arrayref()){
-                        if($i == 1){
-                                push @results, $result->[0];
-                        }else{
-                                push @set, $result->[0];
-                        }
-                }
-                if($i != 1){
-                        @results = union(@results, @set);
-                }
-        }
-        return @results;
+	my $query;
+	my $term;
+	my $i = 0;
+	my @terms = ();
+	my %ranks = ();
+	
+	if($log_queries){
+		my $buffer = $search;
+		$buffer =~ s/:/\\:/g;
+		open LOGFILE, ">>$log_file";
+		print LOGFILE time(), ":", $buffer, ":";
+	}
+	#first try and pull it from QueryCache...must faster...thats why its called Cache...
+	$query = "select Results from `QueryCache` where `Query` = " . $db->quote($search) . ";";
+	my $sth = $db->prepare($query);
+	$sth->execute();
+	if($sth->rows != 0){   #we could find it in QueryCache
+		$resultcache = $sth->fetchrow_arrayref();
+		$results = $resultcache->[0];
+		while($results =~ m/([0-9a-f]+):/gi){
+			push @results, $1;
+		}
+	}else{#we will have to search for ourselves....
+		while($search =~ m/([a-zA-Z0-9]+)/g){
+				push @terms, lc($1);
+		}
+		foreach $term (@terms){
+				my @set = ();
+				$i++;
+				$query = "select WordIndex.MD5, Sources.Rank from WordIndex, Sources where WordIndex.Word=" . $db->quote($term) . " order by Sources.Rank asc limit 1000;";
+				$sth = $db->prepare($query);
+				$sth->execute();
+				while($result = $sth->fetchrow_arrayref()){
+						if($i == 1){
+								push @results, $result->[0];
+						}else{
+								push @set, $result->[0];
+						}
+						if($ranks{$result->[0]} < $result->[1]){
+							$ranks{$result->[0]} = $result->[1];
+						}
+				}
+				if($i != 1){
+						@results = union(@results, @set);
+				}
+		}
+		#@results = orderByRank(@results, %ranks);
+		#now we can Cache our findings for future generations.... or probably just minutes
+		$query = "insert into `QueryCache` (`Query`, `Results`, `Expire`) values (" . $db->quote($search);
+		$query .= ", '";
+		foreach (@results){
+			$query .= "$_:";
+		}
+		$query .= "', ";
+		$query .= time() + (5 * 60);
+		$query .= ");";
+		$db->do($query);
+	}
+	if($log_queries){
+		print LOGFILE scalar(@results), ":", tv_interval($start), "\n";
+		close LOGFILE;
+	}
+	return @results;
 }
 
 sub display{

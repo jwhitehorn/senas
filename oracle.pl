@@ -20,16 +20,16 @@ use DBI;    #only works with transactional MySQL
 use Digest::MD5 qw(md5_hex);
 use URI;	#for link absolution
 
-my $pipe = "/usr/local/senas/var/oracle.pipe";
 my $config_file = "/etc/senas.cfg";
-my @parsers = ("/usr/local/senas/lib/html.pl");	#put your MIME-type parsers here!
 my $action_fail = 1;	#const
 my $action_update = 0;	#const
 
-my $DBPassword;
-my $DBHost;
-my $DB;
-my $DBUser;
+my $password;
+my $username;
+my $host;
+my $database;
+my $path;
+my @parsers = ();
 my $revisit_in = (30 * 24 * 60 * 60);   #30 days....DUN DUN DUNNN!!!!
 
 sub load_handler{
@@ -43,22 +43,8 @@ sub load_handler{
         eval($data);
 }
 
-open FILE, "<$config_file" or die $!;
-while(<FILE>){
-	if( $_ =~ m/password=([^;]*);/){
-		$DBPassword = $1;
-	}
-	if( $_ =~ m/username=([^;]*);/){
-		$DBUser = $1;
-	}
-	if( $_ =~ m/host=([^;]*);/){
-		$DBHost = $1;
-	}
-	if( $_ =~ m/database=([^;]*);/){
-		$DB = $1;
-	}
-}
-close FILE;
+do "$config_file" or die "Error opening configuration file.\n";
+my $pipe = $path . "/senas/var/oracle.pipe";
 
 
 if(lc($ARGV[0]) eq "stop"){

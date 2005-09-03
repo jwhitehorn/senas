@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #The oracle copyright 2004, 2005, Jason Whitehorn
-my $version = "0.8.2";  
+my $version = "0.8.5";  
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -43,7 +43,7 @@ sub load_handler{
         eval($data);
 }
 
-open FILE, "<$config_file";
+open FILE, "<$config_file" or die $!;
 while(<FILE>){
 	if( $_ =~ m/password=([^;]*);/){
 		$DBPassword = $1;

@@ -67,13 +67,15 @@ $commands = "insert into outgoing (URL) values(" . $db->quote($commands) . ");";
 $db->do($commands);
 $db->disconnect();
 print "That should be all I need... sit back while I install Senas for you.\n\n";
+print "#Senas configuration file...";
 open CONFIG ">/etc/senas.cfg";
-print "#Senas configuration file.\n\n";
-print "password=$pass;\n";
-print "username=$user;\n";
-print "host=$ip;\n";
-print "database=$db;\n";
-print "path=$path;";
+print "\$password=$pass;\n";
+print "\$username=$user;\n";
+print "\$host=$ip;\n";
+print "\$database=$db;\n";
+print "\$path=$path;";
+close CONFIG;
+print "DONE\n";
 #install!
 print "Making directory structure...";
 #setup directory struct

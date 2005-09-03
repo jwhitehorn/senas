@@ -18,31 +18,18 @@ use DBI;    #only works with transactional MySQL
 use POSIX qw(setsid);
 use Fcntl;
 
-my $pipe = "/usr/local/senas/var/ranker.pipe";
 my $config_file = "/etc/senas.cfg";
-my $log_file = "/usr/local/senas/var/senas.log";
 
-my $DBPassword;
-my $DBHost;
-my $DB;
-my $DBUser;
+my $password;
+my $host;
+my $database;
+my $username;
+my $path;
 
-open FILE, "<$config_file" or die "Senas::ranker Error reading $config_file\n";
-while(<FILE>){
-	if( $_ =~ m/password=([^;]*);/){
-		$DBPassword = $1;
-	}
-	if( $_ =~ m/username=([^;]*);/){
-		$DBUser = $1;
-	}
-	if( $_ =~ m/host=([^;]*);/){
-		$DBHost = $1;
-	}
-	if( $_ =~ m/database=([^;]*);/){
-		$DB = $1;
-	}
-}
-close FILE;
+do "$config_file" or die "Senas::ranker Error reading $config_file\n";
+
+my $log_file = $path . "/senas/var/senas.log";
+my $pipe = $path . "/senas/var/ranker.pipe";
 
 if(lc($ARGV[0]) eq "stop"){
         open FIFO, ">$pipe";
@@ -69,7 +56,7 @@ open LOG, ">>$log_file" or die $!;
 
 my $command;
 		#	print "[DEBUG::Ranker] Ranker started.\n" unless !$debug;
-$db = DBI->connect("DBI:mysql:$DB:$DBHost", "$DBUser", "$DBPassword")
+$db = DBI->connect("DBI:mysql:$database:$host", "$username", "$password")
 				or die "Error connecting to database\n";
 while(1){
         $command = <FIFO>;
@@ -77,6 +64,7 @@ while(1){
 				$sth->finish;
 				$db->disconnect();
 				close LOG;
+				close FIFO;
                 exit;   #got stop command!
         }else{
 			my $start = time();
@@ -139,4 +127,4 @@ while(1){
         $command = "";
 
 }
-close FIFO;
+#EOF

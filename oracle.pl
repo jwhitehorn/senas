@@ -24,12 +24,12 @@ my $config_file = "/etc/senas.cfg";
 my $action_fail = 1;	#const
 my $action_update = 0;	#const
 
-my $password;
-my $username;
-my $host;
-my $database;
-my $path;
-my @parsers = ();
+$password;
+$username;
+$host;
+$database;
+$path;
+@parsers = ();
 my $revisit_in = (30 * 24 * 60 * 60);   #30 days....DUN DUN DUNNN!!!!
 
 sub load_handler{

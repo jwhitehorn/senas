@@ -49,32 +49,32 @@ print ">";
 $pass = <STDIN>;
 chomp($pass);
 
-my $db = DBI->connect("DBI:mysql:$db:$ip", "$user", "$pass") or die $!;
+my $dbh = DBI->connect("DBI:mysql:$db:$ip", "$user", "$pass") or die $!;
 
-open DBFILE, "<search_dump.sql" or die $!;
-while(<DBFILE>){
-	$commands = $commands . $_;
-}
-close DBFILE;
-$db->do($commands);	#create tables...
+#open DBFILE, "<search_dump.sql" or die $!;
+#while(<DBFILE>){
+#	$commands = $commands . $_;
+#}
+#close DBFILE;
+#$dbh->do($commands);	#create tables...
 
 print "\n";
-print "What url would like you to seed from?";
+print "What url would like you to seed from?\n";
 print ">";
 $commands = <STDIN>;
 chomp($commands);
 
 $commands = "insert into outgoing (URL) values(" . $db->quote($commands) . ");";
-$db->do($commands);
-$db->disconnect();
+$dbh->do($commands);
+$dbh->disconnect();
 print "That should be all I need... sit back while I install Senas for you.\n\n";
 print "#Senas configuration file...";
 open CONFIG, ">/etc/senas.cfg";
-print CONFIG "\$password=$pass;\n";
-print CONFIG "\$username=$user;\n";
-print CONFIG "\$host=$ip;\n";
-print CONFIG "\$database=$db;\n";
-print CONFIG "\$path=$path;";
+print CONFIG "\$password=\"$pass\";\n";
+print CONFIG "\$username=\"$user\";\n";
+print CONFIG "\$host=\"$ip\";\n";
+print CONFIG "\$database=\"$db\";\n";
+print CONFIG "\$path=\"$path\";\n";
 print CONFIG "push \@parsers, \$path . \"/senas/lib/html.pl\";";
 close CONFIG;
 print "DONE\n";

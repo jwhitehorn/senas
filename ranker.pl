@@ -20,11 +20,11 @@ use Fcntl;
 
 my $config_file = "/etc/senas.cfg";
 
-my $password;
-my $host;
-my $database;
-my $username;
-my $path;
+$password;
+$host;
+$database;
+$username;
+$path;
 
 do "$config_file" or die "Senas::ranker Error reading $config_file\n";
 

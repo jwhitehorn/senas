@@ -24,11 +24,11 @@ use Fcntl;
 my $config_file = "/etc/senas.cfg";
 my $last_save;
 
-my $password;
-my $username;
-my $host;
-my $database;
-my $path;
+$password;
+$username;
+$host;
+$database;
+$path;
 
 do "$config_file" or die "Error opening configuration file.\n";
 my $pipe = $path . "/senas/var/simon.pipe";

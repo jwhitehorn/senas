@@ -19,11 +19,11 @@ my $config_file = "/etc/senas.cfg";
 
 my $log_queries = 0;	#not by default anyways
   
-my $password;
-my $username;
-my $host;
-my $database;
-my $path;
+$password;
+$username;
+$host;
+$database;
+$path;
 
 do "$config_file" or die "Error opening configuration file.\n";
 my $log_file = $path . "/senas/var/search.log";

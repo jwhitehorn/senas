@@ -18,8 +18,9 @@ use DBI;    #only works with transactional MySQL
 use POSIX qw(setsid);
 use Fcntl;
 
-my $pipe = "/home/jason/foo.bar";
+my $pipe = "/usr/local/senas/var/ranker.pipe";
 my $config_file = "/etc/senas.cfg";
+my $log_file = "/usr/local/senas/var/senas.log";
 
 my $DBPassword;
 my $DBHost;
@@ -64,6 +65,7 @@ my $pid = fork();
 exit if $pid;   #exit if we are the parent
 setsid or die $!;
 sysopen(FIFO, "$pipe", O_NONBLOCK|O_RDONLY) or die $!;
+open LOG, ">>$log_file" or die $!;
 
 my $command;
 		#	print "[DEBUG::Ranker] Ranker started.\n" unless !$debug;
@@ -74,6 +76,7 @@ while(1){
         if($command =~ m/stop/i){
 				$sth->finish;
 				$db->disconnect();
+				close LOG;
                 exit;   #got stop command!
         }else{
 			my $start = time();
@@ -130,6 +133,7 @@ while(1){
 				$query .= $db->quote($_) . ";";
 				$db->do($query);
 			}
+			print LOG "[Ranker] $elements completed in " . (((time() - $start)/60)/60) . " hours\n";
         }
 		sleep 10;
         $command = "";

@@ -12,6 +12,7 @@ my $db;
 my $commands = "";
 print "-----------------------------------------\n\n";
 print "Senas $version installer\n";
+print "Please visit http://www.senas.org for more information.\n";
 print "This program will install Senas $version.\n\n";
 
 print "Do you wish to continue? [Y/n]: ";
@@ -68,12 +69,13 @@ $db->do($commands);
 $db->disconnect();
 print "That should be all I need... sit back while I install Senas for you.\n\n";
 print "#Senas configuration file...";
-open CONFIG ">/etc/senas.cfg";
-print "\$password=$pass;\n";
-print "\$username=$user;\n";
-print "\$host=$ip;\n";
-print "\$database=$db;\n";
-print "\$path=$path;";
+open CONFIG, ">/etc/senas.cfg";
+print CONFIG "\$password=$pass;\n";
+print CONFIG "\$username=$user;\n";
+print CONFIG "\$host=$ip;\n";
+print CONFIG "\$database=$db;\n";
+print CONFIG "\$path=$path;";
+print CONFIG "push \@parsers, \$path . \"/senas/lib/html.pl\";";
 close CONFIG;
 print "DONE\n";
 #install!
@@ -88,7 +90,6 @@ system("mkfifo /usr/local/senas/var/ranker.pipe");
 system("mkfifo /usr/local/senas/var/simon.pipe");
 print "DONE\n";
 #copy stuff
-exit;
 print "Copying program files...";
 system("cp oracle.pl $path/senas/bin/oracle.pl");
 system("chmod +x $path/senas/bin/oracle.pl");

@@ -1,7 +1,7 @@
 package search;
 #search.pm
 #copyright 2004, 2005, Jason Whitehorn
-my $version = "0.7.11";
+my $version = "0.7.12";
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -171,6 +171,58 @@ sub search{
 	}
     return @results;
 }
+sub union{
+        #calculates set union of two arrays, and returns an array
+        my @setUnion = ();
+        my @setA = shift;
+        my @setB = shift;
+        my %used = ();
+        foreach $elementA (@setA){
+                foreach $elementB (@setB){
+                        if($elementA = $elementB){
+                                if($used{$elementA} != 42){
+                                        push @setUnion, $elementB;
+                                        $used{$elementA} = 42;
+                                }
+                        }
+                }
+        }
+        return @setUnion;
+}
+
+sub search2{
+    my @results = ();
+    my $search = $_[0];
+    my $start = [gettimeofday];
+    my $db = DBI->connect("DBI:mysql:$DB:$DBHost", "$DBUser", "$DBPassword") or return -1;
+        my $query;
+        my $term;
+        my $i = 0;
+        my @terms = ();
+        while($search =~ m/([a-zA-Z0-9]+)/g){
+                push @terms, lc($1);
+        }
+        foreach $term (@terms){
+                my @set = ();
+                $i++;
+                $query = "select WordIndex.MD5 from WordIndex, Sources where WordIndex.Word=" . $db->quote($term) . " order by Sources.Rank 
+asc limit 1000;";
+                $sth = $db->prepare($query);
+                $sth->execute();
+                while($result = $sth->fetchrow_arrayref()){
+                        if($i == 1){
+                                push @results, $result->[0];
+                        }else{
+                                push @set, $result->[0];
+                        }
+                }
+                if($i != 1){
+                        @results = union(@results, @set);
+                }
+        }
+        return @results;
+}
+
 sub display{
     my $elements = shift @_;
     my $page = shift @_;
@@ -304,7 +356,7 @@ sub display{
     #print "</div>";
     print "<center>";
     print "<div class=\"comment\">Search.pm version $version :: Copyright 2004-2005 ";
-    print "<a href=\"mailto:jason.whitehorn@gmail.com\">Jason Whitehorn</a>, ";
+    print "<a href=\"mailto:jason.whitehorn\@gmail.com\">Jason Whitehorn</a>, ";
 	print "<a href=\"http://senas.sourceforge.net/\">source code</a> distributed under the";
 	print "<a href=\"http://www.gnu.org/licenses/gpl.html\">GNU GPL</a></div></center>";
 }

@@ -71,12 +71,13 @@ sysopen(FIFO, "$pipe", O_NONBLOCK|O_RDONLY) or die $!;
 
 my $debug = 0;
 my $command;
-my $db = DBI->connect("DBI:mysql:$DB:$DBHost", "$DBUser", "$DBPassword") or die "Error connection!\n";
+my $db = DBI->connect("DBI:mysql:$database:$host", "$username", "$password") or die "Error connection!\n";
 while(1){
         $command = <FIFO>;
         if($command =~ m/stop/i){
 				$sth->finish();
 				$db->disconnect();
+				close FIFO;
                 exit;   #got stop command!
         }else{
 			$db->do("begin;");  #start transaction
@@ -183,5 +184,5 @@ while(1){
         $command = "";
 
 }
-close FIFO;
+#EOF
 

@@ -12,7 +12,8 @@ my $db;
 my $commands = "";
 print "-----------------------------------------\n\n";
 print "Senas $version installer\n";
-print "Please visit http://www.senas.org for more information.\n";
+print "Please read INSTALL before continuing, or\n";
+print "visit http://www.senas.org for more information.\n";
 print "This program will install Senas $version.\n\n";
 
 print "Do you wish to continue? [Y/n]: ";

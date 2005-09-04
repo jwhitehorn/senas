@@ -58,7 +58,7 @@ print ">";
 $commands = <STDIN>;
 chomp($commands);
 
-$commands = "insert into outgoing (URL) values(" . $db->quote($commands) . ");";
+$commands = "insert into outgoing (URL) values(" . $dbh->quote($commands) . ");";
 $dbh->do($commands);
 $dbh->disconnect();
 print "That should be all I need... sit back while I install Senas for you.\n\n";

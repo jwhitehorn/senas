@@ -1,0 +1,57 @@
+Senas version 0.8.2
+http://www.senas.org
+Copyright 2004, 2005 Jason Whitehorn
+Released under the GNU GPL, see gpl.txt for more info.
+
+To Install Senas on your machine, first make sure you have
+meet the requirements. Your will need:
+
+*) A Unix-like OS. (Linux, FreeBSD, Mac OS X, etc)
+*) Perl version 5.8
+*) MySQL 4
+*) Root access
+
+At the moment Senas can only be installed by a user
+with root privileges.
+
+In addition to the above, you will need some Perl modules.
+Modules can be installed using CPAN. You will need:
+
+*) DBI
+*) DBD::mysql
+*) LWP::RobotUA
+*) URI
+*) Time::HiRes
+*) Digest::MD5
+
+try typing,
+	perl -MCPAN -e 'shell'
+and at the prompt type
+	install MODULE
+where MODULE is each of the above module names.
+
+Once you have installed all of the requirements, you will need 
+to setup a database for Senas. Located in this same directory is 
+a file called 'search_dump.sql'. Simply create a database, and then
+execute the commands from that file.
+
+For example,
+	create database senas;
+then you could copy and paste... assuming your terminal supports 
+this.
+
+Once you have reached this point, run the installer.pl 
+script as root. You have been running as root, right?
+
+This automated script will help you install Senas itself.
+
+Once you have reached this point all that remains is to add symbolic
+links to the Senas daemons. This is only required if you want Senas
+to start automatically when your system boots.
+
+On systems similar to Red-Hat Linux, try
+	ln -s /usr/local/senas/bin/oracle.pl /etc/rc.d/rc3.d/S99oracle
+assuming that you installed Senas in /usr/local, and that you
+desire the oracle to startup on run-level 3.
+
+-Jason

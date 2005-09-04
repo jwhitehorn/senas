@@ -70,14 +70,15 @@ sub allowed{
 	my $url = shift;
 	my $domain;
 	my $try;
+	my $i;
 	if($mode == 0){
 		return 1;
 	}
 	#mdoe 1
 	if($url =~ m/^http:\/\/([^\/]+)\//i){
 		$domain = lc($1);
-		foreach $try (@allow){
-			$try = lc($try) . "\$";
+		foreach $i (@allow){
+			$try = lc($i) . "\$";
 			$try =~ s/\./\\\./g;
 			if($domain =~ $try){
 				return 1;
@@ -111,7 +112,7 @@ while(1){
 				$query .= $db->quote($url) . ";";
 				$db->do($query);
 				$db->do("commit;");		
-				if($allowed($url)){
+				if(allowed($url)){
 					$reply = $robot->get($url);	#attempt to get URL	
 					if($reply->is_success){
 						#if we got something successfully

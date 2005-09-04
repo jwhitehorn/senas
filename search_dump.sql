@@ -58,7 +58,9 @@ CREATE TABLE `Sources` (
   `MD5` varchar(64) default NULL,
   `LastSeen` bigint(20) default NULL,
   `Type` varchar(255) default NULL,
-  `Rank` double default '0'
+  `Rank` double default '0',
+  `LastAction` bigint(20) default NULL,
+  `Failures` int(11) default '0'
 ) TYPE=MyISAM;
 
 

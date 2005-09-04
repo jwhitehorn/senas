@@ -54,4 +54,6 @@ On systems similar to Red-Hat Linux, try
 assuming that you installed Senas in /usr/local, and that you
 desire the oracle to startup on run-level 3.
 
+You will have to manually edit a line in simon.pl, and enter your own email address. This contact information is what is displayed in web site administrators logs, so be friendly and identify yourself.
+
 -Jason

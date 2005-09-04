@@ -48,16 +48,10 @@ print "What is your database password?\n";
 print ">";
 $pass = <STDIN>;
 chomp($pass);
-
+print "\n";
+print "Please wait as we connect to your database...";
 my $dbh = DBI->connect("DBI:mysql:$db:$ip", "$user", "$pass") or die $!;
-
-#open DBFILE, "<search_dump.sql" or die $!;
-#while(<DBFILE>){
-#	$commands = $commands . $_;
-#}
-#close DBFILE;
-#$dbh->do($commands);	#create tables...
-
+print "DONE\n";
 print "\n";
 print "What url would like you to seed from?\n";
 print ">";

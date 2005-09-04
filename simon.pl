@@ -30,6 +30,9 @@ $host;
 $database;
 $path;
 
+$mode;	#mode 0 = allow everything, mode 1 = allow only specified domains
+@allow = ();
+
 do "$config_file" or die "Error opening configuration file.\n";
 my $pipe = $path . "/senas/var/simon.pipe";
 
@@ -63,6 +66,26 @@ $robot->max_redirect(0);	#no redirects!
 my $db = DBI->connect("DBI:mysql:$database:$host", $username, $password)
     or die "Error connecting to database\n";
 my $command;
+sub allowed{
+	my $url = shift;
+	my $domain;
+	my $try;
+	if($mode == 0){
+		return 1;
+	}
+	#mdoe 1
+	if($url =~ m/^http:\/\/([^\/]+)\//i){
+		$domain = lc($1);
+		foreach $try (@allow){
+			$try = lc($try) . "\$";
+			$try =~ s/\./\\\./g;
+			if($domain =~ $try){
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
 while(1){
         $command = <FIFO>;
         if($command =~ m/stop/i){
@@ -88,21 +111,23 @@ while(1){
 				$query .= $db->quote($url) . ";";
 				$db->do($query);
 				$db->do("commit;");		
-				$reply = $robot->get($url);	#attempt to get URL	
-				if($reply->is_success){
-					#if we got something successfully
-					my $page = $reply->content;
-					my $time = time();
-					my $data = $db->quote($page);
-					my $lnk = $db->quote($url);
-					my $contentType = $db->quote($reply->content_type);
-					my $query = "insert into incoming (URL, Data, LastSeen, Action, Type) values(";
-					$query .= "$lnk, $data, $time, $action_update, $contentType);";
-					$db->do($query);
-				}else{
-					$query = "insert into incoming (URL, Action) values (";
-					$query .= $db->quote($url) . ", $action_fail);";
-					$db->quote($query);
+				if($allowed($url)){
+					$reply = $robot->get($url);	#attempt to get URL	
+					if($reply->is_success){
+						#if we got something successfully
+						my $page = $reply->content;
+						my $time = time();
+						my $data = $db->quote($page);
+						my $lnk = $db->quote($url);
+						my $contentType = $db->quote($reply->content_type);
+						my $query = "insert into incoming (URL, Data, LastSeen, Action, Type) values(";
+						$query .= "$lnk, $data, $time, $action_update, $contentType);";
+						$db->do($query);
+					}else{
+						$query = "insert into incoming (URL, Action) values (";
+						$query .= $db->quote($url) . ", $action_fail);";
+						$db->quote($query);
+					}
 				}
 			}else{	#nothing to do
 				sleep 10;

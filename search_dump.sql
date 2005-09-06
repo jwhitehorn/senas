@@ -18,7 +18,7 @@ CREATE TABLE `Index` (
   `Title` varchar(255) default NULL,
   `TSize` int(11) default NULL,
   PRIMARY KEY  (`MD5`)
-) TYPE=MyISAM;
+) TYPE=InnoDB;
 
 
 
@@ -30,7 +30,7 @@ DROP TABLE IF EXISTS `Links`;
 CREATE TABLE `Links` (
   `Source` varchar(64) default NULL,
   `Target` mediumblob
-) TYPE=MyISAM;
+) TYPE=InnoDB;
 
 
 
@@ -44,7 +44,7 @@ CREATE TABLE `QueryCache` (
   `Results` mediumblob,
   `Expire` bigint(20) default NULL,
   PRIMARY KEY  (`Query`)
-) TYPE=MyISAM;
+) TYPE=InnoDB;
 
 
 
@@ -61,7 +61,7 @@ CREATE TABLE `Sources` (
   `Rank` double default '0',
   `LastAction` bigint(20) default NULL,
   `Failures` int(11) default '0'
-) TYPE=MyISAM;
+) TYPE=InnoDB;
 
 
 
@@ -76,7 +76,7 @@ CREATE TABLE `WordIndex` (
   `Location` int(11) default NULL,
   `Source` int(5) default NULL,
   KEY `Word` (`Word`)
-) TYPE=MyISAM;
+) TYPE=InnoDB;
 
 
 
@@ -93,7 +93,7 @@ CREATE TABLE `incoming` (
   `Type` varchar(255) default NULL,
   KEY `LastSeen` (`LastSeen`),
   KEY `LastSeen_2` (`LastSeen`)
-) TYPE=MyISAM;
+) TYPE=InnoDB;
 
 
 
@@ -107,7 +107,7 @@ CREATE TABLE `outgoing` (
   `Priority` smallint(6) default '0',
   `id` bigint(32) unsigned NOT NULL auto_increment,
   PRIMARY KEY  (`id`)
-) TYPE=MyISAM;
+) TYPE=InnoDB;
 
 
 

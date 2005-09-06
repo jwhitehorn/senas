@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 #The oracle copyright 2004, 2005, Jason Whitehorn
-my $version = "0.8.5";  
+#Project Senas http://www.senas.org
+my $version = "0.9.0";  
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -18,11 +19,12 @@ use POSIX qw(setsid);
 use Fcntl;
 use DBI;    #only works with transactional MySQL
 use Digest::MD5 qw(md5_hex);
-use URI;	#for link absolution
 
 my $config_file = "/etc/senas.cfg";
 my $action_fail = 1;	#const
 my $action_update = 0;	#const
+
+my $debug = 0;			#do you want to run in debug mode? TRUE/FALSE
 
 $password;
 $username;
@@ -31,6 +33,8 @@ $database;
 $path;
 @parsers = ();
 my $revisit_in = (30 * 24 * 60 * 60);   #30 days....DUN DUN DUNNN!!!!
+my $allowed_failures = 6;				#a page can fail this many times, before being deleted
+my $time_between_retries = (10 * 60);	#10 minutes
 
 sub load_handler{
         my $filename = $_[0];
@@ -59,17 +63,38 @@ if(!(lc($ARGV[0]) eq "start")){
 }
 #else... start the daemon
 
-chdir("/");
-open STDIN, '/dev/null';
-open STDOUT, '>/dev/null';
-open STDERR, '>/dev/null';
-umask(0);
-my $pid = fork();
-exit if $pid;   #exit if we are the parent
-setsid or die $!;
+chdir("/") unless $debug;
+open STDIN, '/dev/null' unless $debug;
+open STDOUT, '>/dev/null' unless $debug;
+open STDERR, '>/dev/null' unless $debug;
+umask(0) unless $debug;
+my $pid;
+if(!$debug){
+	$pid = fork();
+	exit if $pid;   #exit if we are the parent
+	setsid or die $!;
+}
 sysopen(FIFO, "$pipe", O_NONBLOCK|O_RDONLY) or die $!;
+print "oracle $version has been started in debug mode\n" unless !$debug;
+print "to stop, issue 'oracle.pl stop' from another terminal.\n\n" unless !$debug;
 
-my $debug = 0;
+sub delete_source{	#delete a source from the DB
+	my $dbh = shift;
+	my $url = shift;
+	my $MD5 = shift;
+	my $lnk = $dbh->quote($url);
+	my $chk = $dbh->quote($MD5);
+	$dbh->do("delete from `Sources` where URL=$lnk;");	#remove this old entry
+	my $s = $db->prepare("select MD5 from `Sources` where MD5=$chk;");
+	$s->execute();
+	if($s->rows == 0){	#if this was the only source we just deleted...then
+		$dbh->do("delete from `Index` where MD5=$chk;");
+		$dbh->do("delete from Links where Source=$chk;");
+		$dbh->do("delete from WordIndex where MD5=$chk;");
+	}
+	return 1;
+}
+
 my $command;
 my $db = DBI->connect("DBI:mysql:$database:$host", "$username", "$password") or die "Error connection!\n";
 while(1){
@@ -107,16 +132,18 @@ while(1){
 						$s->execute();
 						if($s->rows > 0){	#we have seen this URL before, and it has changed.			
 							$dup = $s->fetchrow_arrayref();
-							$chk = $db->quote($dup->[0]);
+							#$chk = $db->quote($dup->[0]);
+							$chk = $dup->[0];
 							print "[DEBUG::oracle] Dup. entry, deleting MD5=", $dup->[0], "\n" unless !$debug;
-							$db->do("delete from `Sources` where URL=$lnk;");	#remove this old entry
-							$s = $db->prepare("select MD5 from `Sources` where MD5=$chk;");
-							$s->execute();
-							if($s->rows == 0){	#if this was the only source we just deleted...then
-								$db->do("delete from `Index` where MD5=$chk;");
-								$db->do("delete from Links where Source=$chk;");
-								$db->do("delete from WordIndex where MD5=$chk;");
-							}
+							delete_source($db, $url, $chk);
+						#	$db->do("delete from `Sources` where URL=$lnk;");	#remove this old entry
+						#	$s = $db->prepare("select MD5 from `Sources` where MD5=$chk;");
+						#	$s->execute();
+						#	if($s->rows == 0){	#if this was the only source we just deleted...then
+						#		$db->do("delete from `Index` where MD5=$chk;");
+						#		$db->do("delete from Links where Source=$chk;");
+						#		$db->do("delete from WordIndex where MD5=$chk;");
+						#	}
 						}
 						#insert into Index
 						$query = "insert into `Index` (MD5, Cache, TSize) values (";
@@ -138,8 +165,8 @@ while(1){
 								print "[DEBUG::oracle] -->> No parser found for MIME type: $type\n" unless !$debug;
 						}
 						#obviously we do not know of this source....so put it in sources
-						$query = "insert into Sources (URL, MD5, LastSeen, Type) values (";
-						$query .= $db->quote($url) . ", " . $db->quote($MD5) . ", $LastSeen, ";
+						$query = "insert into Sources (URL, MD5, LastSeen, LastAction, Failures, Type) values (";
+						$query .= $db->quote($url) . ", " . $db->quote($MD5) . ", $LastSeen, $LastSeen, 0, ";
 						$query .= $db->quote($type) . ");";
 						$db->do($query);	#insert into sources
 					}else{   #we have seen this data before
@@ -158,7 +185,14 @@ while(1){
 							$query = "update `Sources` set LastSeen=$LastSeen where URL=";
 							$query .= $db->quote($url) . ";";
 							$db->do($query);
+							#ELSE update the LastSeen value for this source
+							$query = "update `Sources` set LastAction=$LastSeen where URL=";
+							$query .= $db->quote($url) . ";";
+							$db->do($query);
 							$query = "update `Sources` set Type=" . $db->quote($type);
+							$query .= " where URL=" . $db->quote($url) . ";";
+							$db->do($query);
+							$query = "update `Sources` set Failures=0";
 							$query .= " where URL=" . $db->quote($url) . ";";
 							$db->do($query);
 						}
@@ -166,7 +200,26 @@ while(1){
 				}else{
 					if($action == $action_fail){
 						#something we asked for is not valid....
-						#delete it from the DB if it exists in the DB
+						$query = "select MD5, Failures from Sources where URL=" . $db->quote($url) . ";";
+						$sth = $db->prepare($query);
+						$sth->execute();
+						if($sth->rows != 0){
+							$rows = $sth->fetchrow_arrayref();
+							$MD5 = $rows->[0];
+							my $fails = $rows->[1];
+							if($fails > $allowed_failures){
+								delete_source($db, $url, $MD5);	#delete it from the DB.
+							}else{
+								#it has not reached critical...just give it a mark
+								$query = "update `Sources` set Failures=";
+								$query = $query . ($fails + 1);
+								$query = $query . " where URL=" . $db->quote($url) . ";";
+								$db->do($query);
+							#	$query = "update `Sources` set LastAction=" . time();
+							#	$query = $query . " where URL=" . $db->quote($url) . ";";
+							#	$db->do($query);
+							}
+						}
 					}
 				}
 				#delete item from incoming...so we don't double our work ;-)
@@ -174,8 +227,21 @@ while(1){
 			}else{  #if there is nothing in the incoming table
 				print "[DEBUG::oracle] Nothing to do, sleeping\n" unless !$debug;
 				sleep 60 * 2; #we will sleep a little extra this time around...
-				
 				#insert into outgoing sources we have not seen in $revisit_in time!
+				$query = "select URL, MD5 from sources where LastSeen<" . (time()-$revisit_in);
+				$query = " and LastAction<" . (time() - $time_between_retries) . ";";
+				$sth = $db->prepare($query);
+				$sth->execute();
+				while($rows = $sth->fetchrow_arrayref()){	#for each return source
+					$url = $rows->[0];
+					$MD5 = $rows->[1];
+					$query = "insert into outgoing (URL, Priority) values(";
+					$query = $query . $db->quote($url) . ", 4);";
+					$db->do($query);
+					$query = "update `Sources` set LastAction=" . time();
+					$query = $query . " where URL=" . $db->quote($url) . ";";
+					$db->do($query);
+				}
 			}
 			$db->do("commit;");
 			$query = "delete from `QueryCache` where `Expire` < " . time() . ";"; 

@@ -85,7 +85,7 @@ sub delete_source{	#delete a source from the DB
 	my $lnk = $dbh->quote($url);
 	my $chk = $dbh->quote($MD5);
 	$dbh->do("delete from `Sources` where URL=$lnk;");	#remove this old entry
-	my $s = $db->prepare("select MD5 from `Sources` where MD5=$chk;");
+	my $s = $dbh->prepare("select MD5 from `Sources` where MD5=$chk;");
 	$s->execute();
 	if($s->rows == 0){	#if this was the only source we just deleted...then
 		$dbh->do("delete from `Index` where MD5=$chk;");

@@ -235,6 +235,7 @@ while(1){
 				while($rows = $sth->fetchrow_arrayref()){	#for each return source
 					$url = $rows->[0];
 					$MD5 = $rows->[1];
+					print "[DEBUG::oracle] request revist of $url\n" unless !$debug;
 					$query = "insert into outgoing (URL, Priority) values(";
 					$query = $query . $db->quote($url) . ", 4);";
 					$db->do($query);

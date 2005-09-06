@@ -229,7 +229,7 @@ while(1){
 				sleep 60 * 2; #we will sleep a little extra this time around...
 				#insert into outgoing sources we have not seen in $revisit_in time!
 				$query = "select URL, MD5 from `Sources` where LastSeen<" . (time()-$revisit_in);
-				$query = " and LastAction<" . (time() - $time_between_retries) . ";";
+				$query = $query . " and LastAction<" . (time() - $time_between_retries) . ";";
 				$sth = $db->prepare($query);
 				$sth->execute();
 				while($rows = $sth->fetchrow_arrayref()){	#for each return source

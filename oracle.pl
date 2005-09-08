@@ -19,13 +19,14 @@ use POSIX qw(setsid);
 use Fcntl;
 use DBI;    #only works with transactional MySQL
 use Digest::MD5 qw(md5_hex);
+use Compress::Bzip2;
 
 my $config_file = "/etc/senas.cfg";
 my $action_fail = 1;	#const
 my $action_update = 0;	#const
 
 my $debug = 0;			#do you want to run in debug mode? TRUE/FALSE
-
+my $compress_cache = 1;	#you probably want this!
 $password;
 $username;
 $host;
@@ -33,8 +34,8 @@ $database;
 $path;
 @parsers = ();
 my $revisit_in = (30 * 24 * 60 * 60);   #30 days....DUN DUN DUNNN!!!!
-my $allowed_failures = 6;				#a page can fail this many times, before being deleted
-my $time_between_retries = (10 * 60);	#10 minutes
+my $allowed_failures = 3;				#a page can fail this many times, before being deleted
+my $time_between_retries = (30 * 60);	#30 minutes
 
 sub load_handler{
         my $filename = $_[0];
@@ -147,7 +148,13 @@ while(1){
 						}
 						#insert into Index
 						$query = "insert into `Index` (MD5, Cache, TSize) values (";
-						$query .= $db->quote($MD5) . ", " . $db->quote($data) . ", " . length($data) . ");";
+						$query .= $db->quote($MD5) . ", ";
+						if($compress_cache){
+							$query .= $db->quote(memBzip($data));
+						}else{
+							$query .= $db->quote($data);
+						}
+						$query .= ", " . length($data) . ");";
 						$sth = $db->prepare($query);
 						$sth->execute();	#insert into index....
 
@@ -200,6 +207,7 @@ while(1){
 				}else{
 					if($action == $action_fail){
 						#something we asked for is not valid....
+						print "[DEBUG::oracle] Action failure for $url\n" unless !$debug;
 						$query = "select MD5, Failures from Sources where URL=" . $db->quote($url) . ";";
 						$sth = $db->prepare($query);
 						$sth->execute();
@@ -208,9 +216,11 @@ while(1){
 							$MD5 = $rows->[0];
 							my $fails = $rows->[1];
 							if($fails > $allowed_failures){
+								print "[DEBUG::oracle] deleting source\n" unless !$debug;
 								delete_source($db, $url, $MD5);	#delete it from the DB.
 							}else{
 								#it has not reached critical...just give it a mark
+								print "[DEBUG::oracle] failure noted\n" unless !$debug;
 								$query = "update `Sources` set Failures=";
 								$query = $query . ($fails + 1);
 								$query = $query . " where URL=" . $db->quote($url) . ";";
@@ -226,10 +236,10 @@ while(1){
 				$db->do("delete from incoming where LastSeen=$LastSeen and Data=" . $db->quote($data) . ";");
 			}else{  #if there is nothing in the incoming table
 				print "[DEBUG::oracle] Nothing to do, sleeping\n" unless !$debug;
-				sleep 60 * 2; #we will sleep a little extra this time around...
+				sleep 20; #we will sleep a little extra this time around...
 				#insert into outgoing sources we have not seen in $revisit_in time!
 				$query = "select URL, MD5 from `Sources` where LastSeen<" . (time()-$revisit_in);
-				$query = $query . " and LastAction<" . (time() - $time_between_retries) . ";";
+				$query = $query . " and LastAction<" . (time() - $time_between_retries) . " limit 40;";
 				$sth = $db->prepare($query);
 				$sth->execute();
 				while($rows = $sth->fetchrow_arrayref()){	#for each return source

@@ -245,14 +245,21 @@ while(1){
 				while($rows = $sth->fetchrow_arrayref()){	#for each return source
 					$url = $rows->[0];
 					$MD5 = $rows->[1];
-					print "[DEBUG::oracle] request revist of $url\n" unless !$debug;
-					$query = "insert into outgoing (URL, Priority) values(";
-					$query = $query . $db->quote($url) . ", 4);";
-					$db->do($query);
-					$query = "update `Sources` set LastAction=" . time();
-					$query = $query . " where URL=" . $db->quote($url) . ";";
-					$db->do($query);
+					$sth->finish();
+					$query = "select Priority from outgoing where URL=" . $db->quote($url) . ";";
+					$sth = $db->prepare($query);
+					$sth->execute();
+					if($sth->rows == 0){
+						print "[DEBUG::oracle] request revist of $url\n" unless !$debug;
+						$query = "insert into outgoing (URL, Priority) values(";
+						$query = $query . $db->quote($url) . ", 4);";
+						$db->do($query);
+						$query = "update `Sources` set LastAction=" . time();
+						$query = $query . " where URL=" . $db->quote($url) . ";";
+						$db->do($query);
+					}
 				}
+				$sth->finish();
 			}
 			$db->do("commit;");
 			$query = "delete from `QueryCache` where `Expire` < " . time() . ";"; 

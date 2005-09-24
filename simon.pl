@@ -1,7 +1,8 @@
 #!/usr/bin/perl
 #simon, web spider
 #Copyright 2004, 2005, Jason Whitehorn
-my $version = 2.0.5;
+#http://www.senas.org
+my $version = 2.1.0;
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -15,11 +16,13 @@ my $version = 2.0.5;
 #You should have received a copy of the GNU General Public License
 #along with this program; if not, write to the Free Software
 #Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+$| = 1;
 
 use LWP::RobotUA; 
 use DBI;
 use POSIX qw(setsid);
 use Fcntl;
+use URI;
 
 my $config_file = "/etc/senas.cfg";
 my $last_save;
@@ -50,19 +53,23 @@ if(!(lc($ARGV[0]) eq "start")){
 }
 #else... start the daemon
 
-chdir("/");
-open STDIN, '/dev/null';
-open STDOUT, '>/dev/null';
-open STDERR, '>/dev/null';
-umask(0);
-my $pid = fork();
-exit if $pid;   #exit if we are the parent
-setsid or die $!;
+#chdir("/");
+#open STDIN, '/dev/null';
+#open STDOUT, '>/dev/null';
+#open STDERR, '>/dev/null';
+#umask(0);
+#my $pid = fork();
+#exit if $pid;   #exit if we are the parent
+#setsid or die $!;
 sysopen(FIFO, "$pipe", O_NONBLOCK|O_RDONLY) or die $!;
 
-my $robot = LWP::RobotUA->new('simon/2.0', 'admin@mydomain.com');
+my $robot = LWP::RobotUA->new('simon/2.1', 'jason.whitehorn@gmail.com');
 $robot->max_size( (60*1024) );	#download upto 60Kbytes
 $robot->max_redirect(0);	#no redirects!
+$robot->delay(0/60);		
+$robot->timeout(25);
+#$robot->use_sleep(0);
+my $delay = 20 * 60;
 my $db = DBI->connect("DBI:mysql:$database:$host", $username, $password)
     or die "Error connecting to database\n";
 my $command;
@@ -71,6 +78,9 @@ sub allowed{
 	my $domain;
 	my $try;
 	my $i;
+	if($url eq ""){
+		return 0;
+	}
 	if($mode == 0){
 		return 1;
 	}
@@ -87,54 +97,130 @@ sub allowed{
 	}
 	return 0;
 }
+
+my @urls = ();
+my %log = ();
+my $lowThresh = 8900;
+my $highThresh = 9000;
+
+sub getNetloc{
+	my $url = shift;
+	my $add = URI->new($url);
+	if(($add->scheme eq "http") or ($add->scheme eq "https")){
+	return $add->host . ":" . $add->port;
+	}
+}
+sub ttRetry{
+	my $netloc = shift;
+	my $ttr = 0; 
+	if(exists($log{$netloc})){
+		$ttr = $delay - (time() - $log{$netloc});
+		if($ttr < 0){
+			$ttr = 0;
+		}
+	}
+	return $ttr;
+}
+
+sub nextURL{
+	my $lowest = time() + 400;	#big...
+	my $url = "";
+	my $location = -1;
+	my $add;
+	my $i = 0;
+	print "Size: ", scalar(@urls), "\n";
+	foreach $possible (@urls){
+		#print "Possibly $possible\n";
+		if( ttRetry(getNetloc($possible)) < $lowest){
+			$lowest = ttRetry(getNetloc($possible));
+			$url = $possible;
+			$location = $i;
+			if($lowest == 0){
+				splice @urls, $location, 1;
+				print "Lowest delay: $lowest **\n";	
+				$log{getNetloc($possible)} = time();
+				return $possible;
+			}
+		}
+		$i++;
+	}
+	if($location != -1){
+		splice @urls, $location, 1;
+		print "Lowest delay: $lowest\n";
+		sleep $lowest;
+		$log{getNetloc($url)} = time();
+	}
+	return $url;
+}
 while(1){
+	print "*******\n";
         $command = <FIFO>;
         if($command =~ m/stop/i){
-				$db->disconnect();
-				close FIFO;
+		foreach $url (@urls){
+			$query = "insert into outgoing (URL) values(";
+			$query .= $db->quote($url);
+			$query .= ");";
+			$db->do($query);
+		}
+		$db->disconnect();
+		close FIFO;
                 exit;   #got stop command!
         }else{
-			my $key = int(rand()*345789);
+	#			my $key = int(rand()*345789);
+		if(scalar(@urls) < $lowThresh){
 			$db->do("begin;");
-			if($toggle){
-				$query = "select URL from outgoing where id<$key order by Priority desc limit 1;";
-				$toggle = 0;
-			}else{
-				$query = "select URL from outgoing where id>$key order by Priority desc limit 1;";
-				$toggle = 1;
-			}
+			$query = "select URL from outgoing order by priority ";
+			$query .= "desc limit " . ($highThresh - scalar(@urls));
+			$query .= ";";
 			$sth = $db->prepare($query);
 			$sth->execute();
-			if($sth->rows == 1){
-				$rows = $sth->fetchrow_arrayref();
+			print "Refilling buffer...";
+			$query = "delete from outgoing where URL= ?;";
+			$st = $db->prepare($query);
+			while($rows = $sth->fetchrow_arrayref()){
 				$url = $rows->[0];
-				$query = "delete from outgoing where URL=";
-				$query .= $db->quote($url) . ";";
-				$db->do($query);
-				$db->do("commit;");		
-				if(allowed($url)){
-					$reply = $robot->get($url);	#attempt to get URL	
-					if($reply->is_success){
-						#if we got something successfully
-						my $page = $reply->content;
-						my $time = time();
-						my $data = $db->quote($page);
-						my $lnk = $db->quote($url);
-						my $contentType = $db->quote($reply->content_type);
-						my $query = "insert into incoming (URL, Data, LastSeen, Action, Type) values(";
-						$query .= "$lnk, $data, $time, $action_update, $contentType);";
-						$db->do($query);
-					}else{
-						$query = "insert into incoming (URL, Action) values (";
-						$query .= $db->quote($url) . ", $action_fail);";
-						$db->quote($query);
+				$used = 0;
+				foreach $possible (@urls){
+					if($possible eq $url){
+						$used = 1;
 					}
 				}
-			}else{	#nothing to do
-				sleep 10;
+				if(!$used){
+					push @urls, $url;
+				}
+				$st->execute($url);
 			}
+			$db->do("commit;");
 			$sth->finish();
+			$st->finish();
+			print "DONE\n";
+			if(scalar(@urls) == 0){
+				sleep 30;
+			}
+		}
+		$url = nextURL();		
+		print "NExt: $url\n";
+		if( (allowed($url)) ){
+			$reply = $robot->get($url);	#attempt to get URL	
+			if($reply->is_success){
+				print "GOT IT!\n";
+				#if we got something successfully
+				my $page = $reply->content;
+				my $time = time();
+				my $data = $db->quote($page);
+				my $lnk = $db->quote($url);
+				my $contentType = $db->quote($reply->content_type);
+				my $query = "insert into incoming (URL, Data, LastSeen, Action, Type) values(";
+				$query .= "$lnk, $data, $time, $action_update, $contentType);";
+				$db->do($query);
+			}else{
+				print "FAILED\n";
+				$query = "insert into incoming (URL, Action, Data, LastSeen) values (";
+				$query .= $db->quote($url) . ", $action_fail, 'foo'," . time() . ");";
+				$db->do($query);
+			}
+		}
         }
-        $command = "";
+	$command = "";
 }
 #EOF

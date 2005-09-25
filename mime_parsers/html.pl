@@ -13,7 +13,7 @@ sub handler{
 	my $db = $_[0];			#database handler
 	my $data = $_[1];		#data (ie, page) in question
 	my $url	= $_[2];		#url
-	my $MD5 = $_[3];
+	my $id = $_[3];
 	
 	my $link_limit = 10;	#pull no more than 40 links from each page
 	my $pulled_links = 0;	#none yet

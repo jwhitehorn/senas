@@ -1,0 +1,36 @@
+create table outgoing (
+        url text PRIMARY KEY,
+        priority integer default 0 NOT NULL
+);
+create table incoming (
+        action integer NOT NULL,
+        lastseen integer DEFAULT 0 NOT NULL,
+        url text UNIQUE NOT NULL,
+        cache bytea
+);
+create table lexx (
+        id serial PRIMARY KEY,
+        word text UNIQUE NOT NULL
+);
+create table sources (
+        size integer DEFAULT 0 NOT NULL,
+        cache bytea,
+        title text,
+        url text NOT NULL UNIQUE,
+        md5 varchar(32) NOT NULL,
+        id bigserial PRIMARY KEY,
+        lastseen integer NOT NULL,
+        failures integer default 0 NOT NULL,
+        rank float default 0 NOT NULL,
+        type text
+);
+create table wordindex (
+        wordid integer references lexx(id) ON DELETE CASCADE,
+        docid bigint references sources(id) ON DELETE CASCADE,
+        location integer,
+        PRIMARY KEY(location, docid)
+);
+create table links (
+        targetid bigint references sources(id) ON DELETE CASCADE,
+        sourceid bigint references sources(id) ON DELETE CASCADE
+);

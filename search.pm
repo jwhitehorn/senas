@@ -157,21 +157,17 @@ sub search{
 	}
     return @results;
 }
-sub union{
-        #calculates set union of two arrays, and returns an array
+sub intersect{
+        #calculates set intersection of two arrays, and returns an array
         my @setUnion = ();
         my @setA = shift;
         my @setB = shift;
-        my %used = ();
         foreach $elementA (@setA){
-                foreach $elementB (@setB){
-                        if($elementA = $elementB){
-                                if($used{$elementA} != 42){
-                                        push @setUnion, $elementB;
-                                        $used{$elementA} = 42;
-                                }
-                        }
-                }
+			foreach $elementB (@setB){
+				if($elementA = $elementB){
+					push @setUnion, $elementB;
+				}
+			}
         }
         return @setUnion;
 }
@@ -185,8 +181,7 @@ sub search2{
 	my $term;
 	my $i = 0;
 	my @terms = ();
-	my %ranks = ();
-	
+
 	if($log_queries){
 		my $buffer = $search;
 		$buffer =~ s/:/\\:/g;
@@ -210,7 +205,7 @@ sub search2{
 		foreach $term (@terms){
 				my @set = ();
 				$i++;
-				$query = "select WordIndex.MD5, Sources.Rank from WordIndex, Sources where WordIndex.Word=" . $db->quote($term) . " order by Sources.Rank asc limit 1000;";
+				$query = "select distinct WordIndex.MD5 from WordIndex, Sources where WordIndex.Word=" . $db->quote($term) . " and WordIndex.MD5=Sources.MD5 order by Sources.Rank desc;";
 				$sth = $db->prepare($query);
 				$sth->execute();
 				while($result = $sth->fetchrow_arrayref()){
@@ -224,10 +219,9 @@ sub search2{
 						}
 				}
 				if($i != 1){
-						@results = union(@results, @set);
+						@results = intersect(@results, @set);
 				}
 		}
-		#@results = orderByRank(@results, %ranks);
 		#now we can Cache our findings for future generations.... or probably just minutes
 		$query = "insert into `QueryCache` (`Query`, `Results`, `Expire`) values (" . $db->quote($search);
 		$query .= ", '";

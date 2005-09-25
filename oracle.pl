@@ -93,7 +93,7 @@ while(1){
 		close FIFO;
                 exit;   #got stop command!
         }else{
-		$query = "select url, cache, lastseen, action, type from incoming order by lastseen asc limit 1";
+		$query = "select url, cache, lastseen, action, type from incoming order by lastseen asc limit 1;";
 		$sth = $db->prepare($query);
 		$sth->execute();
 		if($sth->rows > 0){	#if the oracle has something to do!!!!

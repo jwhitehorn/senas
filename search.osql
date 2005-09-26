@@ -1,17 +1,28 @@
 create table outgoing (
-        url varchar(40) PRIMARY KEY,
+        url varchar2(4000) PRIMARY KEY,
         priority integer default 0 NOT NULL
-)ENGINE = InnoDB;
+);
 create table incoming (
         action integer NOT NULL,
         lastseen integer DEFAULT 0 NOT NULL,
-        url text UNIQUE NOT NULL,
-        cache bytea
-)ENGINE = InnoDB;
+        url varchar2(4000) UNIQUE NOT NULL,
+        cache blob
+);
 create table lexx (
-        id serial PRIMARY KEY,
-        word text UNIQUE NOT NULL
-)ENGINE = InnoDB;
+        id integer PRIMARY KEY,
+        word varchar2(4000) UNIQUE NOT NULL
+);
+create sequence lexxid
+	start with 1
+	increment by 1
+	nomaxvalue;
+create trigger inc_lexx_id
+	before insert on lexx
+	for each row
+	begin
+		select lexxid.nextval into :new.id from dual
+	end;
+/
 create table sources (
         size integer DEFAULT 0 NOT NULL,
         cache bytea,
@@ -23,14 +34,14 @@ create table sources (
         failures integer default 0 NOT NULL,
         rank float default 0 NOT NULL,
         type text
-)ENGINE = InnoDB;
+);
 create table wordindex (
         wordid integer references lexx(id) ON DELETE CASCADE,
         docid bigint references sources(id) ON DELETE CASCADE,
         location integer,
         PRIMARY KEY(location, docid)
-)ENGINE = InnoDB;
+);
 create table links (
         targetid bigint references sources(id) ON DELETE CASCADE,
         sourceid bigint references sources(id) ON DELETE CASCADE
-)ENGINE = InnoDB;
+);

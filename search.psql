@@ -22,6 +22,7 @@ create table sources (
         lastseen integer NOT NULL,
         failures integer default 0 NOT NULL,
         rank float default 0 NOT NULL,
+		compression integer default 0 NOT NULL,
         type text
 );
 create table wordindex (
@@ -31,6 +32,6 @@ create table wordindex (
         PRIMARY KEY(location, docid)
 );
 create table links (
-        targetid bigint references sources(id) ON DELETE CASCADE,
-        sourceid bigint references sources(id) ON DELETE CASCADE
+        target bigint references sources(id) ON DELETE CASCADE,
+        source text NOT NULL
 );

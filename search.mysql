@@ -1,36 +1,47 @@
 create table outgoing (
-        url varchar(40) PRIMARY KEY,
-        priority integer default 0 NOT NULL
+        url text NOT NULL,
+        priority integer default 0 NOT NULL,
+	PRIMARY KEY(url(255))
 )ENGINE = InnoDB;
+
 create table incoming (
         action integer NOT NULL,
         lastseen integer DEFAULT 0 NOT NULL,
-        url text UNIQUE NOT NULL,
-        cache bytea
+        url text NOT NULL,
+        cache blob,
+	PRIMARY KEY(url(255))
 )ENGINE = InnoDB;
+
 create table lexx (
-        id serial PRIMARY KEY,
-        word text UNIQUE NOT NULL
+        id integer UNSIGNED NOT NULL AUTO_INCREMENT,
+        word text NOT NULL,
+	PRIMARY KEY(id),
+	UNIQUE(word(255))
 )ENGINE = InnoDB;
+
 create table sources (
         size integer DEFAULT 0 NOT NULL,
-        cache bytea,
+        cache blob,
         title text,
-        url text NOT NULL UNIQUE,
+        url text NOT NULL,
         md5 varchar(32) NOT NULL,
-        id bigserial PRIMARY KEY,
+        id bigint PRIMARY KEY AUTO_INCREMENT,
         lastseen integer NOT NULL,
         failures integer default 0 NOT NULL,
         rank float default 0 NOT NULL,
-        type text
+	compression integer default 0 NOT NULL,
+        type text,
+	UNIQUE(url(255))
 )ENGINE = InnoDB;
+
 create table wordindex (
         wordid integer references lexx(id) ON DELETE CASCADE,
         docid bigint references sources(id) ON DELETE CASCADE,
         location integer,
         PRIMARY KEY(location, docid)
 )ENGINE = InnoDB;
+
 create table links (
-        targetid bigint references sources(id) ON DELETE CASCADE,
-        sourceid bigint references sources(id) ON DELETE CASCADE
+        target bigint references sources(id) ON DELETE CASCADE,
+        source text NOT NULL
 )ENGINE = InnoDB;

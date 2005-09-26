@@ -119,12 +119,14 @@ while(1){
 					$sth->finish;
 					print "[DEBUG::oracle] item is new entry\n" unless !$debug;
 					#insert into Index
-					$query = "insert into sources (md5, cache, size, url, lastseen, lastaction, type) values (";
+					$query = "insert into sources (md5, cache, compression, size, url, lastseen, lastaction, type) values (";
 					$query .= $db->quote($MD5) . ", ";
 					if($compress_cache){
 						$query .= $db->quote(memBzip($data));
+						$query .= ", 1";
 					}else{
 						$query .= $db->quote($data);
+						$query .=", 0";
 					}
 					$query .= ", " . length($data) . ", ";
 					$query .= $db->quote($url) . ", ";

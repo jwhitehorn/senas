@@ -20,6 +20,7 @@ create table sources (
         md5 varchar(32) NOT NULL,
         id bigserial PRIMARY KEY,
         lastseen integer NOT NULL,
+		lastaction integer NOT NULL,
         failures integer default 0 NOT NULL,
         rank float default 0 NOT NULL,
 		compression integer default 0 NOT NULL,

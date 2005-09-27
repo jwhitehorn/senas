@@ -212,12 +212,12 @@ while(1){
 				my $data = $db->quote($page);
 				my $lnk = $db->quote($url);
 				my $contentType = $db->quote($reply->content_type);
-				my $query = "insert into incoming (URL, Data, LastSeen, Action, Type) values(";
+				my $query = "insert into incoming (url, cache, lastseen, action, type) values(";
 				$query .= "$lnk, $data, $time, $action_update, $contentType);";
 				$db->do($query);
 			}else{
 				print "FAILED\n";
-				$query = "insert into incoming (URL, Action, Data, LastSeen) values (";
+				$query = "insert into incoming (url, action, cache, lastseen) values (";
 				$query .= $db->quote($url) . ", $action_fail, 'foo'," . time() . ");";
 				$db->do($query);
 			}

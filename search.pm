@@ -51,132 +51,12 @@ sub scale_down{
     return $string;
 }
 
-sub search{
-    my @results = ();
-    my $term = 0;
-    my $search = $_[0];
-    my $start = [gettimeofday];
-    my $db = DBI->connect("DBI:mysql:$database:$host", "$username", "$password") or return -1;
-	if($log_queries){
-		my $buffer = $search;
-		$buffer =~ s/:/\\:/g;
-		open LOGFILE, ">>$log_file";
-		print LOGFILE time(), ":", $buffer, ":";
-	}
-    $query = "select Results from `QueryCache` where `Query` = " . $db->quote($search) . ";";
-    my $sth = $db->prepare($query);
-    $sth->execute();
-    my $old = 0;
-    if($sth->rows != 0){   #we could find it in QueryCache
-        $resultcache = $sth->fetchrow_arrayref();
-        $results = $resultcache->[0];
-        while($results =~ m/([0-9a-f]+):/gi){
-            push @results, $1;
-        }
-    }else{  #we could not find the query in QueryCache
-#        $old = 1;
-#    }
-#    if($old){  #old code!!!
-        while($search =~ m/([a-zA-Z0-9]+)/g){    #loop for every query word
-            $word = lc($1);
-            $term++;
-            $db->do("create temporary table word$term type=heap select MD5 from `WordIndex` where Word='$word' order by Location asc;");
-            push @terms, $word;
-        }
-        # select word1.MD5 from word1, word2 where word1.MD5 = word2.MD5;
-        # select word1.MD5 from word1, word2, word3 where word1.MD5 = word2.MD5 and word1.MD5 = word3.MD5;
-        if($term > 1){
-            my $where = "";
-            my @queries = ();
-            $query = "select word1.MD5 from word1";
-            for($i = 2; $i <= $term; $i++){
-                $query = "$query, word$i";
-                $where = "$where AND (word1.MD5 = word$i.MD5)";
-                if($term > 2){
-                    push @queries, "select word1.MD5 from word1, word$i where word1.MD5 = word$i.MD5;";
-                }
-            }
-            $where =~ s/^ AND//;    #remove first AND
-            $query = "$query where $where;";
-            $sth = $db->prepare($query);
-            $sth->execute();
-            while($results = $sth->fetchrow_arrayref()){
-                my $used = 0;
-                foreach (@results){
-                    if("$_" eq "$results->[0]"){
-                        $used = 1;
-                        last;   #stop NOW!
-                    }
-                }
-                push @results, $results->[0] unless $used;
-            }
-            if($term > 2){
-                foreach $query (@queries){
-                    my $sth = $db->prepare($query);
-                    $sth->execute();
-                    while($results = $sth->fetchrow_arrayref()){
-                        my $used = 0;
-                        foreach (@results){
-                            if("$_" eq "$results->[0]"){
-                                $used = 1;
-                                last;   #stop NOW!
-                            }
-                        }
-                        push @results, $results->[0] unless $used;
-                    }
-                }
-            }
-        }else{ #only 1 term
-            $query = "select word1.MD5 from word1, `Sources` where Sources.MD5=word1.MD5 order by Sources.Rank desc;";
-            my $sth = $db->prepare($query);
-            $sth->execute();
-            while($results = $sth->fetchrow_arrayref()){
-                my $used = 0;
-                foreach (@results){
-                    if("$_" eq "$results->[0]"){
-                        $used = 1;
-                        last;   #stop NOW!
-                    }
-                }
-                push @results, $results->[0] unless $used;
-            }
-        }
-        $query = "insert into `QueryCache` (`Query`, `Results`, `Expire`) values (" . $db->quote($search);
-        $query .= ", '";
-        foreach (@results){
-            $query .= "$_:";
-        }
-        $query .= "', ";
-        $query .= time() + (5 * 60);
-        $query .= ");";
-        $db->do($query);
-    }
-	if($log_queries){
-		print LOGFILE scalar(@results), ":", tv_interval($start), "\n";
-		close LOGFILE;
-	}
-    return @results;
-}
-sub intersect{
-        #calculates set intersection of two arrays, and returns an array
-        my @setUnion = ();
-        my @setA = shift;
-        my @setB = shift;
-        foreach $elementA (@setA){
-			foreach $elementB (@setB){
-				if($elementA = $elementB){
-					push @setUnion, $elementB;
-				}
-			}
-        }
-        return @setUnion;
-}
 
 sub search2{
     my @results = ();
     my $search = $_[0];
     my $start = [gettimeofday];
-    my $db = DBI->connect("DBI:mysql:$database:$host", "$username", "$password") or return -1;
+    my $db = DBI->connect("DBI:$type:database=$database;hpst=$host", "$username", "$password") or return -1;
 	my $query;
 	my $term;
 	my $i = 0;
@@ -189,15 +69,16 @@ sub search2{
 		print LOGFILE time(), ":", $buffer, ":";
 	}
 	#first try and pull it from QueryCache...must faster...thats why its called Cache...
-	$query = "select Results from `QueryCache` where `Query` = " . $db->quote($search) . ";";
-	my $sth = $db->prepare($query);
-	$sth->execute();
-	if($sth->rows != 0){   #we could find it in QueryCache
-		$resultcache = $sth->fetchrow_arrayref();
-		$results = $resultcache->[0];
-		while($results =~ m/([0-9a-f]+):/gi){
-			push @results, $1;
-		}
+#	$query = "select Results from `QueryCache` where `Query` = " . $db->quote($search) . ";";
+#	my $sth = $db->prepare($query);
+#	$sth->execute();
+#	if($sth->rows != 0){   #we could find it in QueryCache
+#		$resultcache = $sth->fetchrow_arrayref();
+#		$results = $resultcache->[0];
+#		while($results =~ m/([0-9a-f]+):/gi){
+#			push @results, $1;
+#		}
+	if(0){
 	}else{#we will have to search for ourselves....
 		while($search =~ m/([a-zA-Z0-9]+)/g){
 				push @terms, lc($1);
@@ -205,21 +86,26 @@ sub search2{
 		foreach $term (@terms){
 				my @set = ();
 				$i++;
-				$query = "select distinct WordIndex.MD5 from WordIndex, Sources where WordIndex.Word=" . $db->quote($term) . " and WordIndex.MD5=Sources.MD5 order by Sources.Rank desc;";
+				$query = "select distinct sources.id from ";
+				$query .= "wordindex, sources, lexx where ";
+				$query .= "lexx.word=" . $db->quote($term);
+				$query .= " and wordindex.docid=sources.id and";
+				$query .= " wordindex.wordid = lexx.id order ";
+				$query .= "by sources.rank desc;";
 				$sth = $db->prepare($query);
 				$sth->execute();
 				while($result = $sth->fetchrow_arrayref()){
 						if($i == 1){
-								push @results, $result->[0];
+							push @results, $result->[0];
 						}else{
-								push @set, $result->[0];
+							push @set, $result->[0];
 						}
 						if($ranks{$result->[0]} < $result->[1]){
 							$ranks{$result->[0]} = $result->[1];
 						}
 				}
 				if($i != 1){
-						@results = intersect(@results, @set);
+					@results = intersect(@results, @set);
 				}
 		}
 		#now we can Cache our findings for future generations.... or probably just minutes
@@ -231,7 +117,7 @@ sub search2{
 		$query .= "', ";
 		$query .= time() + (5 * 60);
 		$query .= ");";
-		$db->do($query);
+		#$db->do($query);
 	}
 	if($log_queries){
 		print LOGFILE scalar(@results), ":", tv_interval($start), "\n";
@@ -249,7 +135,7 @@ sub display{
     
     my @prefix = ("", "kilo", "mega", "giga", "tera", "peta");
     
-    my $db = DBI->connect("DBI:mysql:$database:$host", "$username", "$password") or return -1;
+    my $db = DBI->connect("DBI:$type:database=$database;host=$host", "$username", "$password") or return -1;
     
     print "<html><head>\n";
     print "<title>";
@@ -285,33 +171,25 @@ sub display{
         #foreach $item (@results){  #loop for all the results
         for($i = ($elements*$page); $i != ($elements+($elements*$page)); $i++){
             $item = $results[$i];
-            $query = "select MD5, Cache, Title, TSize from `Index` where MD5='$item';";
+            $query = "select md5, title, size, url, rank, lastseen from sorces where id=$item;";
             $sth = $db->prepare($query);
             $sth->execute();
             while($results = $sth->fetchrow_arrayref()){
                 my $checksum = $results->[0];
-                my @cache = $results->[1];
-                my $filename = $results->[2];
-                my $size = $results->[3];
-              #  my $comment = $results->[4];
+                my $title = $results->[1];
+                my $size = $results->[2];
+		my $url = $results->[3];
+		my $rank = $results->[4];
+		my $lastseen = $results->[5];
                 while($search =~ m/([a-zA-Z0-9]+)/g){ 
                     $string = "<b>$1</b>";
-                    $filename =~ s/$1/$string/ig;   #loses case..BAD!
-                    $comment =~ s/$1/$string/ig;
+                    $title =~ s/$1/$string/ig;   #loses case..BAD!
                 }
 
 # here -------
-                $query = "select URL, LastSeen, Rank from `Sources` where MD5='$checksum' order by Rank desc;";
-                $sub = $db->prepare($query);
-                $sub->execute();
-                my $s = "";
-                if($sub->rows > 1){
-                    $s = "s";
-                }
-                $sources = $sub->fetchrow_arrayref();
                 print "<div class=\"result\">\n";
                 print "<div class=\"filename\">";
-                print "<a href=\"", $sources->[0], "\">", "$filename</a></div> ";
+                print "<a href=\"", $url, "\">", "$filename</a></div> ";
                 $prefix = 0;
                 while($size > 1024){
                     $size = $size / 1024;
@@ -325,28 +203,14 @@ sub display{
                 $size =~ s/(\d)(?=(\d\d\d)+(?!\d))/$1,/g;
                 print "<div class=\"size\">Target size: $size " . @prefix[$prefix] . "byte$suffix</div><br>";
                 print "<div class=checksum>MD5 Checksum: $checksumk</div>";
-                if( !($comment eq "") ){
-                    print "Comment: <div class=\"comment\" style=\"font-size: 10pt;\">$comment</div>";
-                }
-                print "<div class=\"source_list\"><b>", $sub->rows, " known source$s";
-      #          print " (<a href=\"../cgi-bin/piracyreport.pl?md5=$checksum\" style=\"font-size: 8pt;\">report piracy</a>):</b></div>";
-                print "</b></div>";
-                print "<!--<div class=\"cache\"><a href=\"download.pl?checksum=$checksum\">cache</a></div>--><br>\n";
-                $color = 0;
-                do{    #display all the known sources for a given checksum
-                    if(($color % 2) == 0){
-                        print "<div class=\"grey_line\">";
-                    }else{
-                        print "<div class=\"white_line\">";
-                    }
-                    print "<div class=\"source\">";
-                    print "<a href=\"", $sources->[0], "\">", scale_down($sources->[0]), "</a> ";
-					print "Rank: ", $sources->[2];
-                    print "</div>";
-                    print "<div class=\"date\">Last seen: ", scalar localtime($sources->[1]), " CST</div><br>\n";
-                    print "</div>";
-                    $color++;
-                }while($sources = $sub->fetchrow_arrayref());
+                print "<br>\n";
+                print "<div class=\"grey_line\">";
+                print "<div class=\"source\">";
+                print "<a href=\"", $url, "\">", scale_down($url), "</a> ";
+		print "Rank: ", $rank;
+                print "</div>";
+                print "<div class=\"date\">Last seen: ", scalar localtime($lastseen), " CST</div><br>\n";
+                print "</div>";
                 print "</div><br>";
             }
         }

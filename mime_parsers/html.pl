@@ -77,8 +77,8 @@ sub handler{
 			$query .= $db->quote($word) . ";";
 			$sth = $db->prepare($query);
 			$sth->execute();
-			$rows = $sth->fetchrow_arrayref();
-			if($rows->rows == 0){
+			if($sth->rows == 0){
+				$sth->finish;
 				$query = "insert into lexx (word) values(";
 				$query .= $db->quote($word) . ");";
 				$db->query($query);
@@ -87,10 +87,11 @@ sub handler{
 				$query .= $db->quote($word) . ";";
 				$sth = $db->prepare($query);
 				$sth->execute();
-				$rows = $sth->fetchrow_arrayref();
 			}
+			$rows = $sth->fetchrow_arrayref();
 			$lexx{$word} = $rows->[0];
 			$db->commit;
+			$sth->finish;
 		}
 		$query = "Insert into wordindex (wordid, docid, location) values (";
 		$query .= $lexx{$word} . ", $id, $i);";

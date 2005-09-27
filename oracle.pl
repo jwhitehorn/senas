@@ -59,15 +59,17 @@ if(lc($ARGV[0]) eq "stop"){
         close FIFO;
         exit 0;
 }
-if(!(lc($ARGV[0]) eq "start") or !(lc($ARGV[0]) eq "debug")){
-        print "Error, invalid argument!\n";
-        exit 1;
-}
 if(lc($ARGV[0]) eq "debug"){
+	$ARGV[0] = "start";
 	$debug = 1;
 }else{
 	$debug = 0;
 }
+if(!(lc($ARGV[0]) eq "start") ){
+        print "Error, invalid argument!\n";
+        exit 1;
+}
+
 #else... start the daemon
 
 chdir("/") unless $debug;

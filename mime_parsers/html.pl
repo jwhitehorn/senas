@@ -81,7 +81,7 @@ sub handler{
 				$sth->finish;
 				$query = "insert into lexx (word) values(";
 				$query .= $db->quote($word) . ");";
-				$db->query($query);
+				$db->do($query);
 				$db->commit;
 				$query = "select id from lexx where word=";
 				$query .= $db->quote($word) . ";";

@@ -209,7 +209,12 @@ while(1){
 				#if we got something successfully
 				my $page = $reply->content;
 				my $time = time();
-				my $data = $db->quote($page);
+				my $data;
+				if($type = "Pg"){
+					$data = $db->quote($page, DBD::Pg::PG_BYTEA);
+				}else{
+					$data = $db->quote($page);
+				}
 				my $lnk = $db->quote($url);
 				my $contentType = $db->quote($reply->content_type);
 				my $query = "insert into incoming (url, cache, lastseen, action, type) values(";

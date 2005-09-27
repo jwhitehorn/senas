@@ -84,7 +84,7 @@ while(1){
 		while($rows = $sth->fetchrow_arrayref()){
 			$URL = $rows->[0];
 			$ID = $rows->[1];
-			$rating{$URL} = 1.0;
+			$rating{$ID} = 1.0;
 			$IDs{$URL} = $ID;	#ID to URL mapping
 			push @urls, $URL;
 		}
@@ -98,7 +98,7 @@ while(1){
 				$query = "select source from links where ";
 				$query .= "target=";
 				$query .= $db->quote($voter) . ";";
-				$sth = $db->prepare();
+				$sth = $db->prepare($query);
 				$sth->execute();
 				while(@row = $sth->fetchrow_array()){
 					if(!($row[0] eq $IDs{$voter})){
@@ -121,7 +121,7 @@ while(1){
 		foreach $url (@urls){
 			$query = "update sources set rank=";
 			$query .= $rating{$ID{$url}} . " where id=";
-			$query .= $IDs{$id} . ";";
+			$query .= $IDs{$url} . ";";
 			$db->do($query);
 		}
 		print LOG "[Ranker] $elements completed in " . (((time() - $start)/60)/60) . " hours\n";

@@ -54,7 +54,7 @@ sub handler{
 			}
 		}#otherwise...we will get back to it later	
 		#insert links into Links for ranking pages
-		$query = "insert into links (target, source) values ($id, ";
+		$query = "insert into links (source, target) values ($id, ";
 		$query .= $db->quote($link) . ");";
 		$db->do($query);
 		$pulled_links++;

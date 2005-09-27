@@ -6,6 +6,7 @@ create table incoming (
         action integer NOT NULL,
         lastseen integer DEFAULT 0 NOT NULL,
         url text UNIQUE NOT NULL,
+		type text,
         cache bytea
 );
 create table lexx (

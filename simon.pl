@@ -218,7 +218,7 @@ while(1){
 			}else{
 				print "FAILED\n";
 				$query = "insert into incoming (url, action, cache, lastseen) values (";
-				$query .= $db->quote($url) . ", $action_fail, 'foo'," . time() . ");";
+				$query .= $db->quote($url) . ", $action_fail, " . $db->quote("foo") . ", " . time() . ");";
 				$db->do($query);
 			}
 			$db->commit;

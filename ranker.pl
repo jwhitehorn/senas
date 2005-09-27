@@ -91,18 +91,17 @@ while(1){
 			$sth->finish;	#done with statement
 			for($i = 0; $i != 10; $i++){ #ten count feedback cycle
 				foreach $url (@urls){
-					$temp{$url} = $rating{$url};   #make a copy!
+					$temp{$IDs{$url}} = $rating{$IDs{$url}};   
+					#make a copy!
 				}
+				$query = "select source from links where ";
+				$query .= "target=?;";
+				$sth = $db->prepare();
 				foreach $voter (@urls){	#calculate Ri for this loop
-					$ID = $IDs{$voter};
-					$query = "select target from links ";
-					$query .= "where source=";
-					$query .= $db->quote($$MD5;;
-					$sth = $db->prepare($query);
-					$sth->execute();
+					$sth->execute($db->quote($voter));
 					while(@row = $sth->fetchrow_array()){
-						if(!($row[0] eq $voter)){
-							$temp{$row[0]} += $rating{$voter} * $converge;	
+						if(!($row[0] eq $IDs{$voter})){
+							$temp{$row[0]} += $rating{$IDs{$voter}} * $converge;	
 							$command = <FIFO>;	#here is a good time to exit..if
 							if($command =~ m/stop/i){	#we get the stop command
 								$sth->finish;
@@ -112,8 +111,10 @@ while(1){
 						}
 					}
 				}#Ri found
+				$sth->finish;
 				foreach $url (@urls){
-					$rating{$url} = $temp{$url};   #copy back...
+					$rating{$IDs{$url}} = $temp{$IDs{$url}};   
+					#copy back...
 				}
 			}
 			foreach $id (@urls){

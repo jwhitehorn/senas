@@ -71,7 +71,7 @@ sub handler{
 	$i = 0;
 	while($body =~ m/([^ ]+)/g){
 		#index Words...
-		$word = $1;
+		$word = lc($1);
 		if(!defined($lexx{$word})){
 			$query = "select id from lexx where word=";
 			$query .= $db->quote($word) . ";";

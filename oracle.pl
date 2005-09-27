@@ -32,7 +32,8 @@ $username;
 $host;
 $database;
 $path;
-$type = "mysql";
+$type;
+
 @parsers = ();
 my $revisit_in = (30 * 24 * 60 * 60);   #30 days....DUN DUN DUNNN!!!!
 my $allowed_failures = 3;				#a page can fail this many times, before being deleted
@@ -140,6 +141,13 @@ while(1){
 					$query .= "$LastSeen, $LastSeen, " . $db->quote($type) . ");";
 					$db->do($query);
 					$db->commit;
+					#find id of last insert...
+					$query = "select id from sources where url=" . $db->quote($url) . ";";
+					$sth = $db->prepare($query);
+					$sth->execute();
+					$rows = $sth->fetchrow_arrayref();
+					$id = $rows->[0];
+					$sth->finish;
 					#find a parser for the particular MIME type
 					$found_handler = 0;	#we have not found a handler yet, so don't assume anything
 					foreach $handler (@parsers){

@@ -94,11 +94,12 @@ while(1){
 				$temp{$IDs{$url}} = $rating{$IDs{$url}};   
 				#make a copy!
 			}
-			$query = "select source from links where ";
-			$query .= "target=?;";
-			$sth = $db->prepare();
 			foreach $voter (@urls){	#calculate Ri for this loop
-				$sth->execute($db->quote($voter));
+				$query = "select source from links where ";
+				$query .= "target=";
+				$query .= $db->quote($voter) . ";";
+				$sth = $db->prepare();
+				$sth->execute();
 				while(@row = $sth->fetchrow_array()){
 					if(!($row[0] eq $IDs{$voter})){
 						$temp{$row[0]} += $rating{$IDs{$voter}} * $converge;	
@@ -110,8 +111,8 @@ while(1){
 						}
 					}
 				}
+				$sth->finish;
 			}#Ri found
-			$sth->finish;
 			foreach $url (@urls){
 				$rating{$IDs{$url}} = $temp{$IDs{$url}};   
 				#copy back...

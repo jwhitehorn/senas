@@ -34,6 +34,6 @@ create table wordindex (
         PRIMARY KEY(location, docid)
 );
 create table links (
-        target bigint references sources(id) ON DELETE CASCADE,
-        source text NOT NULL
+        source bigint references sources(id) ON DELETE CASCADE,
+        target text NOT NULL
 );

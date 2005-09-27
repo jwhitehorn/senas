@@ -14,7 +14,7 @@ my $version = "1.0";
 #You should have received a copy of the GNU General Public License
 #along with this program; if not, write to the Free Software
 #Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-use DBI;    #only works with transactional MySQL
+use DBI;    #only works with transactional DBMSs
 use POSIX qw(setsid);
 use Fcntl;
 
@@ -25,6 +25,7 @@ $host;
 $database;
 $username;
 $path;
+$type;
 
 do "$config_file" or die "Senas::ranker Error reading $config_file\n";
 
@@ -70,38 +71,38 @@ while(1){
 			my $start = time();
 			my %rating = ();
 			my %temp = (); 
-			my %MD5s = ();
+			my %IDs = ();
 			my @urls = ();
 			my $start = 0;
 			my $elements = 0;
 			my $converge = 0.001;
-			$query = "select URL, MD5 from `Sources`;";    #get EVERYTHING...this will take a while
+			$query = "select url, id from sources;";   
 			$sth = $db->prepare($query);
-			$sth->execute();
+			$sth->execute(); #get EVERYTHING...this will take a while
 			$elements = $sth->rows;
 			my $URL;
 			while($rows = $sth->fetchrow_arrayref()){
 				$URL = $rows->[0];
-				$MD5 = $rows->[1];
+				$ID = $rows->[1];
 				$rating{$URL} = 1.0;
-				$MD5s{$URL} = $MD5;
+				$IDs{$URL} = $ID;	#ID to URL mapping
 				push @urls, $URL;
 			}
-			for($i = 0; $i != 10; $i++){
-				foreach (@urls){
-					$temp{$_} = $rating{$_};   #make a copy!
+			$sth->finish;	#done with statement
+			for($i = 0; $i != 10; $i++){ #ten count feedback cycle
+				foreach $url (@urls){
+					$temp{$url} = $rating{$url};   #make a copy!
 				}
-				foreach (@urls){
-					my $voter = $_;
-					$MD5 = $MD5s{$voter};
-					$MD5 = $db->quote($MD5);
-					$query = "select Target from Links where Source=$MD5;";
+				foreach $voter (@urls){	#calculate Ri for this loop
+					$ID = $IDs{$voter};
+					$query = "select target from links ";
+					$query .= "where source=";
+					$query .= $db->quote($$MD5;;
 					$sth = $db->prepare($query);
 					$sth->execute();
 					while(@row = $sth->fetchrow_array()){
 						if(!($row[0] eq $voter)){
-							$temp{$row[0]} += $rating{$voter} * $converge;
-							
+							$temp{$row[0]} += $rating{$voter} * $converge;	
 							$command = <FIFO>;	#here is a good time to exit..if
 							if($command =~ m/stop/i){	#we get the stop command
 								$sth->finish;
@@ -110,15 +111,15 @@ while(1){
 							}
 						}
 					}
-				}
-				foreach(@urls){
-					$rating{$_} = $temp{$_};   #copy back...
+				}#Ri found
+				foreach $url (@urls){
+					$rating{$url} = $temp{$url};   #copy back...
 				}
 			}
-			foreach(@urls){
-				$query = "update `Sources` set Rank=";
-				$query .= $rating{$_} . " where URL=";
-				$query .= $db->quote($_) . ";";
+			foreach $id (@urls){
+				$query = "update sources set rank=";
+				$query .= $rating{$id} . " where id=";
+				$query .= $IDs{$id} . ";";
 				$db->do($query);
 			}
 			print LOG "[Ranker] $elements completed in " . (((time() - $start)/60)/60) . " hours\n";

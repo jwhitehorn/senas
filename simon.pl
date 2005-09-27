@@ -32,6 +32,7 @@ $username;
 $host;
 $database;
 $path;
+$type;
 
 $mode;	#mode 0 = allow everything, mode 1 = allow only specified domains
 @allow = ();
@@ -70,8 +71,10 @@ $robot->delay(0/60);
 $robot->timeout(25);
 #$robot->use_sleep(0);
 my $delay = 20 * 60;
-my $db = DBI->connect("DBI:mysql:$database:$host", $username, $password)
+my $db = DBI->connect("DBI:$type:database=$database;host=$host", $username, $password)
     or die "Error connecting to database\n";
+$db->{AutoCommit} = 0;	#turn on transactions
+$db->{RaiseError} = 1;	#non-commital error handle
 my $command;
 sub allowed{
 	my $url = shift;
@@ -168,7 +171,6 @@ while(1){
         }else{
 	#			my $key = int(rand()*345789);
 		if(scalar(@urls) < $lowThresh){
-			$db->do("begin;");
 			$query = "select URL from outgoing order by priority ";
 			$query .= "desc limit " . ($highThresh - scalar(@urls));
 			$query .= ";";
@@ -190,7 +192,7 @@ while(1){
 				}
 				$st->execute($url);
 			}
-			$db->do("commit;");
+			$db->commit;
 			$sth->finish();
 			$st->finish();
 			print "DONE\n";
@@ -219,6 +221,7 @@ while(1){
 				$query .= $db->quote($url) . ", $action_fail, 'foo'," . time() . ");";
 				$db->do($query);
 			}
+			$db->commit;
 		}
         }
 	$command = "";

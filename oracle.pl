@@ -137,7 +137,7 @@ while(1){
 					}
 					$query .= ", " . length($data) . ", ";
 					$query .= $db->quote($url) . ", ";
-					$query .= "$LastSeen, $LastSeen, $type);";
+					$query .= "$LastSeen, $LastSeen, " . $db->quote($type) . ");";
 					$db->do($query);
 					$db->commit;
 					#find a parser for the particular MIME type

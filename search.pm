@@ -52,11 +52,11 @@ sub scale_down{
 }
 
 
-sub search2{
+sub search{
     my @results = ();
     my $search = $_[0];
     my $start = [gettimeofday];
-    my $db = DBI->connect("DBI:$type:database=$database;hpst=$host", "$username", "$password") or return -1;
+    my $db = DBI->connect("DBI:$type:database=$database;host=$host", "$username", "$password") or return -1;
 	my $query;
 	my $term;
 	my $i = 0;

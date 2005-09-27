@@ -57,76 +57,75 @@ open LOG, ">>$log_file" or die $!;
 
 my $command;
 		#	print "[DEBUG::Ranker] Ranker started.\n" unless !$debug;
-$db = DBI->connect("DBI:mysql:$database:$host", "$username", "$password")
+$db = DBI->connect("DBI:$type:database=$database;host=$host", "$username", "$password")
 				or die "Error connecting to database\n";
 while(1){
         $command = <FIFO>;
         if($command =~ m/stop/i){
-				$sth->finish;
-				$db->disconnect();
-				close LOG;
-				close FIFO;
+		$sth->finish;
+		$db->disconnect();
+		close LOG;
+		close FIFO;
                 exit;   #got stop command!
         }else{
-			my $start = time();
-			my %rating = ();
-			my %temp = (); 
-			my %IDs = ();
-			my @urls = ();
-			my $start = 0;
-			my $elements = 0;
-			my $converge = 0.001;
-			$query = "select url, id from sources;";   
-			$sth = $db->prepare($query);
-			$sth->execute(); #get EVERYTHING...this will take a while
-			$elements = $sth->rows;
-			my $URL;
-			while($rows = $sth->fetchrow_arrayref()){
-				$URL = $rows->[0];
-				$ID = $rows->[1];
-				$rating{$URL} = 1.0;
-				$IDs{$URL} = $ID;	#ID to URL mapping
-				push @urls, $URL;
+		my $start = time();
+		my %rating = ();
+		my %temp = (); 
+		my %IDs = ();
+		my @urls = ();
+		my $start = 0;
+		my $elements = 0;
+		my $converge = 0.001;
+		$query = "select url, id from sources;";   
+		$sth = $db->prepare($query);
+		$sth->execute(); #get EVERYTHING...this will take a while
+		$elements = $sth->rows;
+		my $URL;
+		while($rows = $sth->fetchrow_arrayref()){
+			$URL = $rows->[0];
+			$ID = $rows->[1];
+			$rating{$URL} = 1.0;
+			$IDs{$URL} = $ID;	#ID to URL mapping
+			push @urls, $URL;
+		}
+		$sth->finish;	#done with statement
+		for($i = 0; $i != 10; $i++){ #ten count feedback cycle
+			foreach $url (@urls){
+				$temp{$IDs{$url}} = $rating{$IDs{$url}};   
+				#make a copy!
 			}
-			$sth->finish;	#done with statement
-			for($i = 0; $i != 10; $i++){ #ten count feedback cycle
-				foreach $url (@urls){
-					$temp{$IDs{$url}} = $rating{$IDs{$url}};   
-					#make a copy!
-				}
-				$query = "select source from links where ";
-				$query .= "target=?;";
-				$sth = $db->prepare();
-				foreach $voter (@urls){	#calculate Ri for this loop
-					$sth->execute($db->quote($voter));
-					while(@row = $sth->fetchrow_array()){
-						if(!($row[0] eq $IDs{$voter})){
-							$temp{$row[0]} += $rating{$IDs{$voter}} * $converge;	
-							$command = <FIFO>;	#here is a good time to exit..if
-							if($command =~ m/stop/i){	#we get the stop command
-								$sth->finish;
-								$db->disconnect();
-								exit;   #got stop command!
-							}
+			$query = "select source from links where ";
+			$query .= "target=?;";
+			$sth = $db->prepare();
+			foreach $voter (@urls){	#calculate Ri for this loop
+				$sth->execute($db->quote($voter));
+				while(@row = $sth->fetchrow_array()){
+					if(!($row[0] eq $IDs{$voter})){
+						$temp{$row[0]} += $rating{$IDs{$voter}} * $converge;	
+						$command = <FIFO>;	#here is a good time to exit..if
+						if($command =~ m/stop/i){	#we get the stop command
+							$sth->finish;
+							$db->disconnect();
+							exit;   #got stop command!
 						}
 					}
-				}#Ri found
-				$sth->finish;
-				foreach $url (@urls){
-					$rating{$IDs{$url}} = $temp{$IDs{$url}};   
-					#copy back...
 				}
+			}#Ri found
+			$sth->finish;
+			foreach $url (@urls){
+				$rating{$IDs{$url}} = $temp{$IDs{$url}};   
+				#copy back...
 			}
-			foreach $id (@urls){
-				$query = "update sources set rank=";
-				$query .= $rating{$id} . " where id=";
-				$query .= $IDs{$id} . ";";
-				$db->do($query);
-			}
-			print LOG "[Ranker] $elements completed in " . (((time() - $start)/60)/60) . " hours\n";
+		}#end of feekback cycle
+		foreach $url (@urls){
+			$query = "update sources set rank=";
+			$query .= $rating{$ID{$url}} . " where id=";
+			$query .= $IDs{$id} . ";";
+			$db->do($query);
+		}
+		print LOG "[Ranker] $elements completed in " . (((time() - $start)/60)/60) . " hours\n";
         }
-		sleep 10;
+	sleep 10;
         $command = "";
-
 }
 #EOF

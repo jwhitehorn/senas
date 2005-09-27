@@ -20,8 +20,7 @@ sub handler{
 
 	$data =~ m/<title>(.*)<\/title>/gi;		#pull title
 	my $title = $1;
-	my $query = "update `Index` set Title=" . $db->quote($title) . " where MD5=";
-	$query .= $db->quote($MD5) . ";";
+	my $query = "update sources set title=" . $db->quote($title) . " where id=$id;";
 	$db->do($query);
 	print "[DEBUG::Parser] TEXT::HTML got called!\n";
 	while(  ($pulled_links < $link_limit) and ($data =~ m/<a[^>]*href=([^>]*)>/gi) ){
@@ -33,7 +32,7 @@ sub handler{
 		$link = URI->new_abs($link, $url);  
 		$link = URI->new($link)->canonical;
 		$link =~ s/\#.*//g;     #no pound signs
-		$query = "select LastSeen from Sources where URL=";
+		$query = "select lastseen from sources where URL=";
 		$query .= $db->quote($link) . ";";
 		$sth = $db->prepare($query);
 		$sth->execute();
@@ -47,14 +46,13 @@ sub handler{
 						$query = $sth->fetchrow_arrayref();
 						if($query->[0] == 0){
 		#insert into outgoing
-							$query = "insert into outgoing (URL) values (";
+							$query = "insert into outgoing (url) values (";
 							$query .= $db->quote($link) . ");";
 							$db->do($query);
 						}
 		}#otherwise...we will get back to it later	
 		#insert links into Links for ranking pages
-		$query = "insert into Links (Source, Target) values (";
-		$query .= $db->quote($MD5) . ", ";
+		$query = "insert into links (target, source) values ($id, ";
 		$query .= $db->quote($link) . ");";
 		$db->do($query);
 		$pulled_links++;

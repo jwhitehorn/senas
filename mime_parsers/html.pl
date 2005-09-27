@@ -13,6 +13,8 @@ sub handler{
 	my $db = $_[0];			#database handler
 	my $data = $_[1];		#data (ie, page) in question
 	my $url	= $_[2];		#url
+	
+	my %lexx = ();	#"Keanu Reeves in: My Own Private Airfield."	-Tom Servo
 	my $id = $_[3];
 	
 	my $link_limit = 10;	#pull no more than 40 links from each page
@@ -32,30 +34,32 @@ sub handler{
 		$link = URI->new_abs($link, $url);  
 		$link = URI->new($link)->canonical;
 		$link =~ s/\#.*//g;     #no pound signs
-		$query = "select lastseen from sources where URL=";
+		$query = "select lastseen from sources where url=";
 		$query .= $db->quote($link) . ";";
 		$sth = $db->prepare($query);
 		$sth->execute();
 		if($sth->rows == 0){
-		#we have NEVER been here..
-		#$query = "select Priority from outgoing where URL=";
-						$query = "select count(*) from outgoing where URL=";
-						$query .= $db->quote($link) . ";";
-						$sth = $db->prepare($query);
-						$sth->execute();
-						$query = $sth->fetchrow_arrayref();
-						if($query->[0] == 0){
-		#insert into outgoing
-							$query = "insert into outgoing (url) values (";
-							$query .= $db->quote($link) . ");";
-							$db->do($query);
-						}
+			$sth->finish;
+			#we have NEVER been here.
+			$query = "select count(*) from outgoing where url=";
+			$query .= $db->quote($link) . ";";
+			$sth = $db->prepare($query);
+			$sth->execute();
+			$query = $sth->fetchrow_arrayref();
+			if($query->[0] == 0){
+				#insert into outgoing
+				$query = "insert into outgoing (url) values (";
+				$query .= $db->quote($link) . ");";
+				$db->do($query);
+			}
 		}#otherwise...we will get back to it later	
 		#insert links into Links for ranking pages
 		$query = "insert into links (target, source) values ($id, ";
 		$query .= $db->quote($link) . ");";
 		$db->do($query);
 		$pulled_links++;
+		$db->commit;
+		$sth->finish;
 	}
 	$page = $data;  #make a copy
 	$page =~ s/\n//g;
@@ -68,9 +72,30 @@ sub handler{
 	while($body =~ m/([^ ]+)/g){
 		#index Words...
 		$word = $1;
-		$query = "Insert into WordIndex (MD5, Word, Location, Source) values (";
-		$query .= $db->quote($MD5) . ", " . $db->quote(lc($word)) . ", $i, 1);";
+		if(!defined($lexx{$word})){
+			$query = "select id from lexx where word=";
+			$query .= $db->quote($word) . ";";
+			$sth = $db->prepare($query);
+			$sth->execute();
+			$rows = $sth->fetchrow_arrayref();
+			if($rows->rows == 0){
+				$query = "insert into lexx (word) values(";
+				$query .= $db->quote($word) . ");";
+				$db->query($query);
+				$db->commit;
+				$query = "select id from lexx where word=";
+				$query .= $db->quote($word) . ";";
+				$sth = $db->prepare($query);
+				$sth->execute();
+				$rows = $sth->fetchrow_arrayref();
+			}
+			$lexx{$word} = $rows->[0];
+			$db->commit;
+		}
+		$query = "Insert into wordindex (wordid, docid, location) values (";
+		$query .= $lexx{$word} . ", $id, $i);";
 		$db->do($query);
 		$i++;
+		$db->commit;
 	}
 }

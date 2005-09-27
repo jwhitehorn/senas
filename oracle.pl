@@ -19,14 +19,15 @@ use POSIX qw(setsid);
 use Fcntl;
 use DBI;    #only works with transactional MySQL
 use Digest::MD5 qw(md5_hex);
-use Compress::Bzip2;
+use MIME::Base64;
+#use Compress::Bzip2;
 
 my $config_file = "/etc/senas.cfg";
 my $action_fail = 1;	#const
 my $action_update = 0;	#const
 
 my $debug = 0;			#do you want to run in debug mode? TRUE/FALSE
-my $compress_cache = 1;	#you probably want this!
+my $compress_cache = 0;	#you probably want this!
 $password;
 $username;
 $host;
@@ -108,7 +109,7 @@ while(1){
 			print "[DEBUG::oracle] Something to do!\n" unless !$debug;
 			$rows = $sth->fetchrow_arrayref();
 			my $url = $rows->[0];
-			my $data = $rows->[1];
+			my $data = decode_base64($rows->[1]);
 			my $LastSeen = $rows->[2];
 			my $action = $rows->[3];
 			my $type = $rows->[4];
@@ -129,13 +130,8 @@ while(1){
 					#insert into Index
 					$query = "insert into sources (md5, cache, compression, size, url, lastseen, lastaction, type) values (";
 					$query .= $db->quote($MD5) . ", ";
-					if($compress_cache){
-						$query .= $db->quote(memBzip($data));
-						$query .= ", 1";
-					}else{
-						$query .= $db->quote($data);
-						$query .=", 0";
-					}
+					$query .= $db->quote(encode_base64($data));
+					$query .=", 0";
 					$query .= ", " . length($data) . ", ";
 					$query .= $db->quote($url) . ", ";
 					$query .= "$LastSeen, $LastSeen, " . $db->quote($type) . ");";

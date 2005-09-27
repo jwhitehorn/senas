@@ -6,8 +6,8 @@ create table incoming (
         action integer NOT NULL,
         lastseen integer DEFAULT 0 NOT NULL,
         url text UNIQUE NOT NULL,
-		type text,
-        cache bytea
+	type text,
+        cache text
 );
 create table lexx (
         id serial PRIMARY KEY,
@@ -15,16 +15,16 @@ create table lexx (
 );
 create table sources (
         size integer DEFAULT 0 NOT NULL,
-        cache bytea,
+        cache text,
         title text,
         url text NOT NULL UNIQUE,
         md5 varchar(32) NOT NULL,
         id bigserial PRIMARY KEY,
         lastseen integer NOT NULL,
-		lastaction integer NOT NULL,
+	lastaction integer NOT NULL,
         failures integer default 0 NOT NULL,
         rank float default 0 NOT NULL,
-		compression integer default 0 NOT NULL,
+	compression integer default 0 NOT NULL,
         type text
 );
 create table wordindex (

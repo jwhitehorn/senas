@@ -23,6 +23,7 @@ use DBI;
 use POSIX qw(setsid);
 use Fcntl;
 use URI;
+use MIME::Base64;
 
 my $config_file = "/etc/senas.cfg";
 my $last_save;
@@ -209,12 +210,7 @@ while(1){
 				#if we got something successfully
 				my $page = $reply->content;
 				my $time = time();
-				my $data;
-				if($type = "Pg"){
-					$data = $db->quote($page, DBD::Pg::PG_BYTEA);
-				}else{
-					$data = $db->quote($page);
-				}
+				my $data = $db->quote(encode_base64($page));
 				my $lnk = $db->quote($url);
 				my $contentType = $db->quote($reply->content_type);
 				my $query = "insert into incoming (url, cache, lastseen, action, type) values(";

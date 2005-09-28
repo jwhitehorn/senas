@@ -1,7 +1,7 @@
 package search;
 #search.pm
 #copyright 2004, 2005, Jason Whitehorn
-my $version = "0.7.12";
+my $version = "0.8.0";
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -86,7 +86,7 @@ sub search{
 		foreach $term (@terms){
 				my @set = ();
 				$i++;
-				$query = "select distinct sources.id from ";
+				$query = "select sources.id from ";
 				$query .= "wordindex, sources, lexx where ";
 				$query .= "lexx.word=" . $db->quote($term);
 				$query .= " and wordindex.docid=sources.id and";
@@ -171,7 +171,7 @@ sub display{
         #foreach $item (@results){  #loop for all the results
         for($i = ($elements*$page); $i != ($elements+($elements*$page)); $i++){
             $item = $results[$i];
-            $query = "select md5, title, size, url, rank, lastseen from sorces where id=$item;";
+            $query = "select md5, title, size, url, rank, lastseen from sources where id=$item;";
             $sth = $db->prepare($query);
             $sth->execute();
             while($results = $sth->fetchrow_arrayref()){

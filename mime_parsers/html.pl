@@ -23,7 +23,7 @@ sub handler{
 
 	$data =~ m/<title>(.*)<\/title>/gi;		#pull title
 	my $title = $1;
-	my $query = "update sources set title=" . $db->quote(encode_base64($title)) . " where id=$id;";
+	my $query = "update sources set title=" . $db->quote($title) . " where id=$id;";
 	$db->do($query);
 	print "[DEBUG::Parser] TEXT::HTML got called!\n";
 	while(  ($pulled_links < $link_limit) and ($data =~ m/<a[^>]*href=([^>]*)>/gi) ){

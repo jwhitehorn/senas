@@ -14,19 +14,15 @@ sub handler{
 	my $db = $_[0];			#database handler
 	my $data = $_[1];		#data (ie, page) in question
 	my $url	= $_[2];		#url
-	
-	my %lexx = ();	#"Keanu Reeves in: My Own Private Airfield."	-Tom Servo
 	my $id = $_[3];
 	
-	my $link_limit = 10;	#pull no more than 40 links from each page
-	my $pulled_links = 0;	#none yet
 
 	$data =~ m/<title>(.*)<\/title>/gi;		#pull title
 	my $title = $1;
 	my $query = "update sources set title=" . $db->quote($title) . " where id=$id;";
 	$db->do($query);
 	print "[DEBUG::Parser] TEXT::HTML got called!\n";
-	while(  ($pulled_links < $link_limit) and ($data =~ m/<a[^>]*href=([^>]*)>/gi) ){
+	while($data =~ m/<a[^>]*href=([^>]*)>/gi){
 		my $link = $1;
 		#start striping links from the page we just got
 		$link =~ s/^["']//;
@@ -58,7 +54,6 @@ sub handler{
 		$query = "insert into links (source, target) values ($id, ";
 		$query .= $db->quote($link) . ");";
 		$db->do($query);
-		$pulled_links++;
 		$db->commit;
 		$sth->finish;
 	}

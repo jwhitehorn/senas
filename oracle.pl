@@ -89,7 +89,7 @@ sysopen(FIFO, "$pipe", O_NONBLOCK|O_RDONLY) or die $!;
 print "oracle $version has been started in debug mode\n" unless !$debug;
 print "to stop, issue 'oracle.pl stop' from another terminal.\n\n" unless !$debug;
 
-
+my %lexx = ();	#"Keanu Reeves in: My Own Private Airfield."	-Tom Servo
 my $command;
 my $db = DBI->connect("DBI:$type:database=$database;host=$host", "$username", "$password") or die "Error connection!\n";
 $db->{AutoCommit} = 0;	#turn on transactions

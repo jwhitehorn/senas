@@ -102,7 +102,7 @@ while(1){
 		close FIFO;
                 exit;   #got stop command!
         }else{
-		$query = "select url, cache, lastseen, action, type from incoming order by lastseen asc limit 1;";
+		$query = "select url, cache, lastseen, action, type from incoming order limit 1;";
 		$sth = $db->prepare($query);
 		$sth->execute();
 		if($sth->rows > 0){	#if the oracle has something to do!!!!
@@ -128,7 +128,7 @@ while(1){
 					$sth->finish;
 					print "[DEBUG::oracle] item is new entry\n" unless !$debug;
 					#insert into Index
-					$query = "insert into sources (md5, cache, compression, size, url, lastseen, lastaction, type) values (";
+					$query = "insert into sources (md5, cache, encoding, size, url, lastseen, lastaction, type) values (";
 					$query .= $db->quote($MD5) . ", ";
 					$query .= $db->quote(encode_base64($data));
 					$query .=", 0";
@@ -149,7 +149,7 @@ while(1){
 					foreach $handler (@parsers){
 						print "[DEBUG::oracle] Loading handler ", $handler, "\n" unless !$debug;
 						load_handler($handler);
-						if(handler_type() == $type){
+						if(handler_type() eq $type){
 							$found_handler = 1;
 							handler($db, $data, $url, $id);
 						}

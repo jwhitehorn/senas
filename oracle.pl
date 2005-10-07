@@ -39,16 +39,20 @@ $type;
 my $revisit_in = (30 * 24 * 60 * 60);   #30 days....DUN DUN DUNNN!!!!
 my $allowed_failures = 3;				#a page can fail this many times, before being deleted
 my $time_between_retries = (30 * 60);	#30 minutes
-
+my %parserBuffer = ();
 sub load_handler{
         my $filename = $_[0];
+	if(defined($parserBuffer{$filename})){
+		return eval($parserBuffer{$filename});
+	}
         my $data;
         open FILE, "<$filename";
 		while(<FILE>){
                 $data = $data . $_;
         }
         close FILE;
-        eval($data);
+	$parserBuffer{$filename} = $data;
+        return eval($data);
 }
 
 do "$config_file" or die "Error opening configuration file.\n";
@@ -93,7 +97,7 @@ my %lexx = ();	#"Keanu Reeves in: My Own Private Airfield."	-Tom Servo
 my $command;
 my $db = DBI->connect("DBI:$type:database=$database;host=$host", "$username", "$password") or die "Error connection!\n";
 $db->{AutoCommit} = 0;	#turn on transactions
-$db->{RaiseError} = 1;	#non-commital error handle
+$db->{RaiseError} = 0;	#non-commital error handle
 while(1){
         $command = <FIFO>;
         if($command =~ m/stop/i){
@@ -102,7 +106,7 @@ while(1){
 		close FIFO;
                 exit;   #got stop command!
         }else{
-		$query = "select url, cache, lastseen, action, type from incoming order limit 1;";
+		$query = "select url, cache, lastseen, action, type from incoming limit 1;";
 		$sth = $db->prepare($query);
 		$sth->execute();
 		if($sth->rows > 0){	#if the oracle has something to do!!!!
@@ -223,7 +227,7 @@ while(1){
 			$db->rollback;
 		}
 		$query = "delete from `QueryCache` where `Expire` < " . time() . ";"; 
-		$db->do($query);    #delete outdated query cache entries
+		#$db->do($query);    #delete outdated query cache entries
 		$db->commit;
         }
         $command = "";

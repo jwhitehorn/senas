@@ -8,7 +8,7 @@ meet the requirements. Your will need:
 
 *) A Unix-like OS. (Linux, FreeBSD, Mac OS X, etc)
 *) Perl version 5.8
-*) MySQL 4
+*) PostgreSQL 8.0 or higher
 *) Root access
 
 At the moment Senas can only be installed by a user
@@ -18,11 +18,12 @@ In addition to the above, you will need some Perl modules.
 Modules can be installed using CPAN. You will need:
 
 *) DBI
-*) DBD::mysql
+*) DBD::Pg
 *) LWP::RobotUA
 *) URI
 *) Time::HiRes
 *) Digest::MD5
+*) MIME::Base64
 
 try typing,
 	perl -MCPAN -e 'shell'
@@ -32,13 +33,13 @@ where MODULE is each of the above module names.
 
 Once you have installed all of the requirements, you will need 
 to setup a database for Senas. Located in this same directory is 
-a file called 'search_dump.sql'. Simply create a database, and then
+a file called 'search.psql'. Simply create a database, and then
 execute the commands from that file.
 
-For example,
-	create database senas;
-then you could copy and paste... assuming your terminal supports 
-this.
+For example, from a PSQL prompt type:
+	\i /home/jason/search.psql
+
+Assuming /home/jason is the directory in which search.psql resides. 
 
 Once you have reached this point, run the installer.pl 
 script as root. You have been running as root, right?
@@ -54,6 +55,8 @@ On systems similar to Red-Hat Linux, try
 assuming that you installed Senas in /usr/local, and that you
 desire the oracle to startup on run-level 3.
 
-You will have to manually edit a line in simon.pl, and enter your own email address. This contact information is what is displayed in web site administrators logs, so be friendly and identify yourself.
+You will have to manually edit a line in simon.pl, and enter your own email 
+address. This contact information is what is displayed in web site 
+administrators logs, so be friendly and identify yourself.
 
 -Jason

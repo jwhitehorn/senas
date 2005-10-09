@@ -24,6 +24,7 @@ $username;
 $host;
 $database;
 $path;
+$type;
 
 do "$config_file" or die "Error opening configuration file.\n";
 my $log_file = $path . "/senas/var/search.log";
@@ -86,12 +87,11 @@ sub search{
 		foreach $term (@terms){
 				my @set = ();
 				$i++;
-				$query = "select sources.id from ";
-				$query .= "wordindex, sources, lexx where ";
+				$query = "select distinct docid from ";
+				$query .= "wordindex, lexx where ";
 				$query .= "lexx.word=" . $db->quote($term);
-				$query .= " and wordindex.docid=sources.id and";
-				$query .= " wordindex.wordid = lexx.id order ";
-				$query .= "by sources.rank desc;";
+				$query .= " and";
+				$query .= " wordindex.wordid = lexx.id;";
 				$sth = $db->prepare($query);
 				$sth->execute();
 				while($result = $sth->fetchrow_arrayref()){
@@ -183,13 +183,13 @@ sub display{
 		my $lastseen = $results->[5];
                 while($search =~ m/([a-zA-Z0-9]+)/g){ 
                     $string = "<b>$1</b>";
-                    $title =~ s/$1/$string/ig;   #loses case..BAD!
+                    #$title =~ s/$1/$string/ig;   #loses case..BAD!
                 }
 
 # here -------
                 print "<div class=\"result\">\n";
                 print "<div class=\"filename\">";
-                print "<a href=\"", $url, "\">", "$filename</a></div> ";
+                print "<a href=\"", $url, "\">", "$title</a></div> ";
                 $prefix = 0;
                 while($size > 1024){
                     $size = $size / 1024;
@@ -202,7 +202,7 @@ sub display{
                 }
                 $size =~ s/(\d)(?=(\d\d\d)+(?!\d))/$1,/g;
                 print "<div class=\"size\">Target size: $size " . @prefix[$prefix] . "byte$suffix</div><br>";
-                print "<div class=checksum>MD5 Checksum: $checksumk</div>";
+                print "<div class=checksum>MD5 Checksum: $checksum</div>";
                 print "<br>\n";
                 print "<div class=\"grey_line\">";
                 print "<div class=\"source\">";

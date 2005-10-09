@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 $| = 1;	#no output buffer
-my $version = "0.8.2";	#this is the version of Senas...
+my $version = "0.9.0";	#this is the version of Senas...
 #this program has no version of it's own
 use DBI;
 my $path = "";
@@ -51,7 +51,7 @@ $pass = <STDIN>;
 chomp($pass);
 print "\n";
 print "Please wait as we connect to your database...";
-my $dbh = DBI->connect("DBI:mysql:$db:$ip", "$user", "$pass") or die $!;
+my $dbh = DBI->connect("DBI:Pg:database=$db;host=$ip", "$user", "$pass") or die $!;
 print "DONE\n";
 print "\n";
 print "What url would like you to seed from?\n";
@@ -59,7 +59,7 @@ print ">";
 $commands = <STDIN>;
 chomp($commands);
 
-$commands = "insert into outgoing (URL) values(" . $dbh->quote($commands) . ");";
+$commands = "insert into outgoing (url) values(" . $dbh->quote($commands) . ");";
 $dbh->do($commands);
 $dbh->disconnect();
 print "That should be all I need... sit back while I install Senas for you.\n\n";
@@ -70,6 +70,7 @@ print CONFIG "\$username=\"$user\";\n";
 print CONFIG "\$host=\"$ip\";\n";
 print CONFIG "\$database=\"$db\";\n";
 print CONFIG "\$path=\"$path\";\n";
+print CONFIG "\$type=\"Pg\";";
 print CONFIG "push \@parsers, \$path . \"/senas/lib/html.pl\";";
 close CONFIG;
 print "DONE\n";
@@ -105,4 +106,5 @@ print "DONE\n";
 #`ln -s /usr/local/senas/bin/simon.pl /etc/rc.d/rc3.d/S99simon`;
 print "\n";
 print "Installation complete.\n";
+print "Please read INSTALL for post-installation instructions.\n\n";
 print "Thank you for installing Senas.\n";

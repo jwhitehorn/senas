@@ -55,14 +55,14 @@ if(!(lc($ARGV[0]) eq "start")){
 }
 #else... start the daemon
 
-#chdir("/");
-#open STDIN, '/dev/null';
-#open STDOUT, '>/dev/null';
-#open STDERR, '>/dev/null';
-#umask(0);
-#my $pid = fork();
-#exit if $pid;   #exit if we are the parent
-#setsid or die $!;
+chdir("/");
+open STDIN, '/dev/null';
+open STDOUT, '>/dev/null';
+open STDERR, '>/dev/null';
+umask(0);
+my $pid = fork();
+exit if $pid;   #exit if we are the parent
+setsid or die $!;
 sysopen(FIFO, "$pipe", O_NONBLOCK|O_RDONLY) or die $!;
 
 my $robot = LWP::RobotUA->new('simon/2.1', 'jason.whitehorn@gmail.com');
@@ -75,7 +75,7 @@ my $delay = 20 * 60;
 my $db = DBI->connect("DBI:$type:database=$database;host=$host", $username, $password)
     or die "Error connecting to database\n";
 $db->{AutoCommit} = 0;	#turn on transactions
-$db->{RaiseError} = 1;	#non-commital error handle
+$db->{RaiseError} = 0;	#non-commital error handle
 my $command;
 sub allowed{
 	my $url = shift;
@@ -165,6 +165,7 @@ while(1){
 			$query .= $db->quote($url);
 			$query .= ");";
 			$db->do($query);
+			$db->commit;
 		}
 		$db->disconnect();
 		close FIFO;

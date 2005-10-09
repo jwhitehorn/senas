@@ -24,7 +24,7 @@ create table sources (
 	lastaction integer NOT NULL,
         failures integer default 0 NOT NULL,
         rank float default 0 NOT NULL,
-	compression integer default 0 NOT NULL,
+	encoding integer default 0 NOT NULL,
         type text
 );
 create table wordindex (

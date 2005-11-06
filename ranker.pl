@@ -31,12 +31,16 @@ do "$config_file" or die "Senas::ranker Error reading $config_file\n";
 
 my $log_file = $path . "/senas/var/senas.log";
 my $pipe = $path . "/senas/var/ranker.pipe";
-
+my $debug = 0;
 if(lc($ARGV[0]) eq "stop"){
         open FIFO, ">$pipe";
         print FIFO "stop\n";
         close FIFO;
         exit 0;
+}
+if(lc($ARGV[0]) eq "debug"){
+	$ARGV[0] = "start";
+	$debug = 1;
 }
 if(!(lc($ARGV[0]) eq "start")){
         print "Error, invalid argument!\n";
@@ -44,27 +48,29 @@ if(!(lc($ARGV[0]) eq "start")){
 }
 #else... start the daemon
 
-chdir("/");
-open STDIN, '/dev/null';
-open STDOUT, '>/dev/null';
-open STDERR, '>/dev/null';
-umask(0);
-my $pid = fork();
-exit if $pid;   #exit if we are the parent
-setsid or die $!;
+chdir("/") unless $debug;
+open STDIN, '/dev/null' unless $debug;
+open STDOUT, '>/dev/null' unless $debug;
+open STDERR, '>/dev/null' unless $debug;
+umask(0) unless $debug;
+my $pid;
+if(!$debug){
+	$pid = fork();
+	exit if $pid;   #exit if we are the parent
+	setsid or die $!;
+}
 sysopen(FIFO, "$pipe", O_NONBLOCK|O_RDONLY) or die $!;
-open LOG, ">>$log_file" or die $!;
 
 my $command;
 		#	print "[DEBUG::Ranker] Ranker started.\n" unless !$debug;
 $db = DBI->connect("DBI:$type:database=$database;host=$host", "$username", "$password")
 				or die "Error connecting to database\n";
+$db->do("set enable_seqscan = off;");
 while(1){
         $command = <FIFO>;
         if($command =~ m/stop/i){
 		$sth->finish;
 		$db->disconnect();
-		close LOG;
 		close FIFO;
                 exit;   #got stop command!
         }else{
@@ -76,7 +82,9 @@ while(1){
 		my $start = 0;
 		my $elements = 0;
 		my $converge = 0.001;
-		$query = "select url, id from sources;";   
+		my %links = ();
+		print scalar(localtime(time())), ":\t Top of loop!\n";
+		$query = "select url, id from sources order by id asc limit 500;";   
 		$sth = $db->prepare($query);
 		$sth->execute(); #get EVERYTHING...this will take a while
 		$elements = $sth->rows;
@@ -88,21 +96,31 @@ while(1){
 			$IDs{$URL} = $ID;	#ID to URL mapping
 			push @urls, $URL;
 		}
+		print scalar(localtime(time())), ":\t Done fetching ", $sth->rows, " documents\n";
 		$sth->finish;	#done with statement
-		for($i = 0; $i != 10; $i++){ #ten count feedback cycle
+#		$query = "select source, target from links;";
+#		$sth = $db->prepare($query);
+#		$sth->execute();
+#		while($rows = $sth->fetchrow_arrayref()){
+#			push @{$links{$rows->[1]}}, $rows->[0];
+#		}
+#		$sth->finish;
+		for($i = 0; $i != 4; $i++){ #ten count feedback cycle
 			foreach $url (@urls){
 				$temp{$IDs{$url}} = $rating{$IDs{$url}};   
 				#make a copy!
 			}
-			foreach $voter (@urls){	#calculate Ri for this loop
-				$query = "select source from links where ";
-				$query .= "target=";
-				$query .= $db->quote($voter) . ";";
+			foreach $voteie (@urls){	#calculate Ri for this loop
+#				foreach $source (@{$links{$voter}}){
+				$query = "select target from links where ";
+				$query .= "source=";
+				$query .= $IDs{$voteie} . ";";
 				$sth = $db->prepare($query);
 				$sth->execute();
 				while(@row = $sth->fetchrow_array()){
-					if(!($row[0] eq $IDs{$voter})){
-						$temp{$row[0]} += $rating{$IDs{$voter}} * $converge;	
+					$target = $row->[0];
+					if(!($target eq $voteie)){
+						$temp{$UDs{$voteie}} += $rating{$IDs{$target}} * $converge;	
 						$command = <FIFO>;	#here is a good time to exit..if
 						if($command =~ m/stop/i){	#we get the stop command
 							$sth->finish;
@@ -111,20 +129,21 @@ while(1){
 						}
 					}
 				}
-				$sth->finish;
+#				$sth->finish;
 			}#Ri found
 			foreach $url (@urls){
 				$rating{$IDs{$url}} = $temp{$IDs{$url}};   
 				#copy back...
 			}
+			print scalar(localtime(time())), ":\t Done with cycle $i\n";
 		}#end of feekback cycle
 		foreach $url (@urls){
 			$query = "update sources set rank=";
-			$query .= $rating{$ID{$url}} . " where id=";
+			$query .= $rating{$IDs{$url}} . " where id=";
 			$query .= $IDs{$url} . ";";
 			$db->do($query);
 		}
-		print LOG "[Ranker] $elements completed in " . (((time() - $start)/60)/60) . " hours\n";
+		print scalar(localtime(time())), ":\t Bottom of loop!\n";
         }
 	sleep 10;
         $command = "";

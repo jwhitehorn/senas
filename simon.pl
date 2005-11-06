@@ -65,7 +65,7 @@ exit if $pid;   #exit if we are the parent
 setsid or die $!;
 sysopen(FIFO, "$pipe", O_NONBLOCK|O_RDONLY) or die $!;
 
-my $robot = LWP::RobotUA->new('simon/2.1', 'jason.whitehorn@gmail.com');
+my $robot = LWP::RobotUA->new('simon/2.1', 'admin@domain.com');
 $robot->max_size( (60*1024) );	#download upto 60Kbytes
 $robot->max_redirect(0);	#no redirects!
 $robot->delay(0/60);		

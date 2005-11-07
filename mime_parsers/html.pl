@@ -14,13 +14,14 @@ sub handler{
 	my $data = $_[0];		#data (ie, page) in question
 	my $url	= $_[1];		#url
 	my $id = $_[2];
-	
+	my $limit = 30;
 
 	$data =~ m/<title>(.*)<\/title>/gi;		#pull title
 	my $title = $1;
 	push_title($id, $title);
 	print "[DEBUG::Parser] TEXT::HTML got called!\n";
-	while($data =~ m/<a[^>]*href=([^>]*)>/gi){
+	my $i = 0;
+	while(($data =~ m/<a[^>]*href=([^>]*)>/gi) and ($i < $limit)){
 		my $link = $1;
 		#start striping links from the page we just got
 		$link =~ s/^["']//;
@@ -30,6 +31,7 @@ sub handler{
 		$link = URI->new($link)->canonical;
 		$link =~ s/\#.*//g;     #no pound signs
 		push_link($id, $link);
+		$i++;
 	}
 	$page = $data;  #make a copy
 	$page =~ s/\n//g;

@@ -14,10 +14,25 @@ my $version = "1.0";
 #You should have received a copy of the GNU General Public License
 #along with this program; if not, write to the Free Software
 #Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+
+#Mon Nov  7 23:11:15 2005:        Top of loop!
+#Mon Nov  7 23:11:51 2005:        Done fetching 207241 documents
+#        Working on cycle 0: [207241/207241]
+#Tue Nov  8 01:48:05 2005:        Done with cycle 0
+#        Working on cycle 1: [207241/207241]
+#Tue Nov  8 04:10:42 2005:        Done with cycle 1
+#        Working on cycle 2: [207241/207241]
+#Tue Nov  8 06:32:11 2005:        Done with cycle 2
+#        Working on cycle 3: [207241/207241]
+#Tue Nov  8 09:02:08 2005:        Done with cycle 3
+#Tue Nov  8 09:26:06 2005:        Bottom of loop!
+#Total elapsed time: 614.25 minutes
+
 use DBI;    #only works with transactional DBMSs
 use POSIX qw(setsid);
 use Fcntl;
-
+$| = 1;
 my $config_file = "/etc/senas.cfg";
 
 $password;
@@ -84,7 +99,7 @@ while(1){
 		my $converge = 0.001;
 		my %links = ();
 		print scalar(localtime(time())), ":\t Top of loop!\n";
-		$query = "select url, id from sources order by id asc limit 500;";   
+		$query = "select url, id from sources;";   
 		$sth = $db->prepare($query);
 		$sth->execute(); #get EVERYTHING...this will take a while
 		$elements = $sth->rows;
@@ -97,30 +112,34 @@ while(1){
 			push @urls, $URL;
 		}
 		print scalar(localtime(time())), ":\t Done fetching ", $sth->rows, " documents\n";
+		my $start = time();
 		$sth->finish;	#done with statement
-#		$query = "select source, target from links;";
-#		$sth = $db->prepare($query);
-#		$sth->execute();
-#		while($rows = $sth->fetchrow_arrayref()){
-#			push @{$links{$rows->[1]}}, $rows->[0];
-#		}
-#		$sth->finish;
 		for($i = 0; $i != 4; $i++){ #ten count feedback cycle
+			print "\tWorking on cycle $i: ";
 			foreach $url (@urls){
 				$temp{$IDs{$url}} = $rating{$IDs{$url}};   
 				#make a copy!
 			}
-			foreach $voteie (@urls){	#calculate Ri for this loop
-#				foreach $source (@{$links{$voter}}){
-				$query = "select target from links where ";
-				$query .= "source=";
-				$query .= $IDs{$voteie} . ";";
+			$x = 0;
+			my $message;
+			foreach $votie (@urls){	#calculate Ri for this loop
+				if($x){
+					for($j = 0; $j != length($message); $j++){
+						print "\b";
+					}
+				}
+				$x++;
+				$message = "[$x/" . scalar(@urls) . "]";
+				print $message;
+				$query = "select source from links where ";
+				$query .= "target=";
+				$query .= $db->quote($votie) . ";";
 				$sth = $db->prepare($query);
 				$sth->execute();
-				while(@row = $sth->fetchrow_array()){
-					$target = $row->[0];
-					if(!($target eq $voteie)){
-						$temp{$UDs{$voteie}} += $rating{$IDs{$target}} * $converge;	
+				while($row = $sth->fetchrow_arrayref()){
+					$voter = $row->[0];
+					if(!($votie eq $voter)){
+						$temp{$IDs{$votie}} += $rating{$voter} * $converge;
 						$command = <FIFO>;	#here is a good time to exit..if
 						if($command =~ m/stop/i){	#we get the stop command
 							$sth->finish;
@@ -135,15 +154,29 @@ while(1){
 				$rating{$IDs{$url}} = $temp{$IDs{$url}};   
 				#copy back...
 			}
+			print "\n";
 			print scalar(localtime(time())), ":\t Done with cycle $i\n";
 		}#end of feekback cycle
+		$x = 0;
+		print "\tUpdating rankings: ";
 		foreach $url (@urls){
+			if($x){
+				for($j = 0; $j != length($message); $j++){
+					print "\b";
+				}
+			}
+			$x++;
+			$message = "[$x/" . scalar(@urls) . "]";
+			print $message;
 			$query = "update sources set rank=";
 			$query .= $rating{$IDs{$url}} . " where id=";
 			$query .= $IDs{$url} . ";";
 			$db->do($query);
+			#print $IDs{$url}, "\t";
 		}
+		print "\n";
 		print scalar(localtime(time())), ":\t Bottom of loop!\n";
+		print "Total elapsed time: ", (time() - $start)/60, " minutes\n";
         }
 	sleep 10;
         $command = "";

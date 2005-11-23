@@ -1,7 +1,7 @@
 package search;
 #search.pm
 #copyright 2004, 2005, Jason Whitehorn
-my $version = "0.8.0";
+my $version = "0.9.0";
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -52,78 +52,43 @@ sub scale_down{
     return $string;
 }
 
-
 sub search{
     my @results = ();
+    my %ranks = ();
     my $search = $_[0];
     my $start = [gettimeofday];
     my $db = DBI->connect("DBI:$type:database=$database;host=$host", "$username", "$password") or return -1;
-	my $query;
-	my $term;
-	my $i = 0;
-	my @terms = ();
+        $db->do("set enable_seqscan = off;");
+        my $query;
+        my $term;
+        my $i = 0;
+        my $term;
 
-	if($log_queries){
-		my $buffer = $search;
-		$buffer =~ s/:/\\:/g;
-		open LOGFILE, ">>$log_file";
-		print LOGFILE time(), ":", $buffer, ":";
-	}
-	#first try and pull it from QueryCache...must faster...thats why its called Cache...
-#	$query = "select Results from `QueryCache` where `Query` = " . $db->quote($search) . ";";
-#	my $sth = $db->prepare($query);
-#	$sth->execute();
-#	if($sth->rows != 0){   #we could find it in QueryCache
-#		$resultcache = $sth->fetchrow_arrayref();
-#		$results = $resultcache->[0];
-#		while($results =~ m/([0-9a-f]+):/gi){
-#			push @results, $1;
-#		}
-	if(0){
-	}else{#we will have to search for ourselves....
-		while($search =~ m/([a-zA-Z0-9]+)/g){
-				push @terms, lc($1);
-		}
-		foreach $term (@terms){
-				my @set = ();
-				$i++;
-				$query = "select distinct docid from ";
-				$query .= "wordindex, lexx where ";
-				$query .= "lexx.word=" . $db->quote($term);
-				$query .= " and";
-				$query .= " wordindex.wordid = lexx.id;";
-				$sth = $db->prepare($query);
-				$sth->execute();
-				while($result = $sth->fetchrow_arrayref()){
-						if($i == 1){
-							push @results, $result->[0];
-						}else{
-							push @set, $result->[0];
-						}
-						if($ranks{$result->[0]} < $result->[1]){
-							$ranks{$result->[0]} = $result->[1];
-						}
-				}
-				if($i != 1){
-					@results = intersect(@results, @set);
-				}
-		}
-		#now we can Cache our findings for future generations.... or probably just minutes
-		$query = "insert into `QueryCache` (`Query`, `Results`, `Expire`) values (" . $db->quote($search);
-		$query .= ", '";
-		foreach (@results){
-			$query .= "$_:";
-		}
-		$query .= "', ";
-		$query .= time() + (5 * 60);
-		$query .= ");";
-		#$db->do($query);
-	}
-	if($log_queries){
-		print LOGFILE scalar(@results), ":", tv_interval($start), "\n";
-		close LOGFILE;
-	}
-	return @results;
+        if($log_queries){
+                my $buffer = $search;
+                $buffer =~ s/:/\\:/g;
+                open LOGFILE, ">>$log_file";
+                print LOGFILE time(), ":", $buffer, ":";
+        }
+        $query = "";
+        while($search =~ m/([a-zA-Z0-9]+)/g){
+                $term = lc($1);
+                if(!($query eq "")){
+                        $query .= " intersect ";
+                }
+                $query .= "select distinct docid, rank from wordindex, lexx, sources where";
+                $query .= " lexx.word=" . $db->quote($term) . " and";
+                $query .= " lexx.id=wordid and docid=sources.id";
+        }
+        $query .= ";";
+        $sth = $db->prepare($query);
+        $sth->execute();
+        while($results = $sth->fetchrow_arrayref()){
+                push @results, $results->[0];
+		$ranks{$results->[0]} = $results->[1];
+        }
+	my @sorted_results = sort {$ranks{$b} <=> $ranks{$a}} @results;
+        return @sorted_results;
 }
 
 sub display{

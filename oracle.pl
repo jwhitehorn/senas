@@ -214,7 +214,7 @@ while($running > 1){
 			my $type = $rows->[4];
 			my $MD5 = md5_hex($data);
 			$sth->finish;
-			$queue_lock = 1;
+			#$queue_lock = 1;
 			$db->do("delete from incoming where url=" . $db->quote($url) . ";");
 			$db->commit;
 			if($action == $action_update){
@@ -250,7 +250,7 @@ while($running > 1){
 						$rows = $sth->fetchrow_arrayref();
 						$id = $rows->[0];
 						$sth->finish;
-						$queue_lock = 0;
+						#$queue_lock = 0;
 						#find a parser for the particular MIME type
 						$found_handler = 0;	#we have not found a handler yet, so don't assume anything
 						foreach $handler (@parsers){
@@ -264,7 +264,7 @@ while($running > 1){
 						if($found_handler == 0){
 							print "[DEBUG::oracle] -->> No parser found for MIME type: $type\n" unless !$debug;
 						}
-							$queue_lock = 1;
+							#$queue_lock = 1;
 				}else{   #we have seen this data before
 					$row = $sth->fetchrow_arrayref();
 					$id = $row->[0];
@@ -301,6 +301,9 @@ while($running > 1){
 			}
 		}else{  #if there is nothing in the incoming table
 			$sth->finish;
+			while(scalar(keys(%lexx))){
+				delete $lexx{(keys(%lexx))[0]};	#remove a cached lexx
+			}
 			print "[DEBUG::oracle] Nothing to do, sleeping\n" unless !$debug;
 			sleep 20; #we will sleep a little extra this time around...
 			#insert into outgoing sources we have not seen in $revisit_in time!
@@ -334,7 +337,11 @@ while($running > 1){
 	}
 	print "[DEBUG::oracle] doc/sec: ", $count / (time()-$start_time), "\n" unless !$debug;
 	print "[DEBUG::oracle] command queue size: ", scalar(@toDo), "\n" unless !$debug;
-	$queue_lock = 0;
+	while(scalar(@toDo) > 4000){ 
+		sleep 1;
+		print "[DEBUG::oracle] command queue size: ", scalar(@toDo), "\n" unless !$debug;
+	}
+	#$queue_lock = 0;
 }
 $sth->finish();
 $db->disconnect();

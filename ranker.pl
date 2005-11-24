@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #The oracle copyright 2004, 2005, Jason Whitehorn
-my $version = "1.0";  
+my $version = "1.1";  
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
 #as published by the Free Software Foundation; either version 2
@@ -14,20 +14,6 @@ my $version = "1.0";
 #You should have received a copy of the GNU General Public License
 #along with this program; if not, write to the Free Software
 #Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-
-
-#Mon Nov  7 23:11:15 2005:        Top of loop!
-#Mon Nov  7 23:11:51 2005:        Done fetching 207241 documents
-#        Working on cycle 0: [207241/207241]
-#Tue Nov  8 01:48:05 2005:        Done with cycle 0
-#        Working on cycle 1: [207241/207241]
-#Tue Nov  8 04:10:42 2005:        Done with cycle 1
-#        Working on cycle 2: [207241/207241]
-#Tue Nov  8 06:32:11 2005:        Done with cycle 2
-#        Working on cycle 3: [207241/207241]
-#Tue Nov  8 09:02:08 2005:        Done with cycle 3
-#Tue Nov  8 09:26:06 2005:        Bottom of loop!
-#Total elapsed time: 614.25 minutes
 
 use DBI;    #only works with transactional DBMSs
 use POSIX qw(setsid);

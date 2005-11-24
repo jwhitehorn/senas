@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 $| = 1;	#no output buffer
-my $version = "0.9.0";	#this is the version of Senas...
+my $version = "0.9.1";	#this is the version of Senas...
 #this program has no version of it's own
 use DBI;
 my $path = "";
@@ -54,13 +54,16 @@ print "Please wait as we connect to your database...";
 my $dbh = DBI->connect("DBI:Pg:database=$db;host=$ip", "$user", "$pass") or die $!;
 print "DONE\n";
 print "\n";
-print "What url would like you to seed from?\n";
-print ">";
-$commands = <STDIN>;
-chomp($commands);
-
-$commands = "insert into outgoing (url) values(" . $dbh->quote($commands) . ");";
-$dbh->do($commands);
+print "What urls would like you to seed from?\n";
+do{
+	print "(hit return to continue)>";
+	$commands = <STDIN>;
+	chomp($commands);
+	if(!($commands eq "")){
+		$commands = "insert into outgoing (url) values(" . $dbh->quote($commands) . ");";
+		$dbh->do($commands);
+	}
+}while(!($commands eq ""));
 $dbh->disconnect();
 print "That should be all I need... sit back while I install Senas for you.\n\n";
 print "#Senas configuration file...";

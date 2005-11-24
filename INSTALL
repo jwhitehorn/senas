@@ -1,4 +1,4 @@
-Senas version 0.8.2
+Senas version 0.9.1
 http://www.senas.org
 Copyright 2004, 2005 Jason Whitehorn
 Released under the GNU GPL, see gpl.txt for more info.
@@ -7,7 +7,7 @@ To Install Senas on your machine, first make sure you have
 meet the requirements. Your will need:
 
 *) A Unix-like OS. (Linux, FreeBSD, Mac OS X, etc)
-*) Perl version 5.8
+*) Perl version 5.8 (with iThreads)
 *) PostgreSQL 8.0 or higher
 *) Root access
 
